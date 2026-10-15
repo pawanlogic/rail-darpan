@@ -1,0 +1,449 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#071b35">
+  <meta name="description" content="Rail Darpan — Indian Railways PNR status, live train running status, train schedules and railway updates.">
+  <title>Rail Darpan — Indian Railways Companion</title>
+  <style>
+    :root {
+      --navy: #071b35;
+      --blue: #1459d9;
+      --light: #f3f6fb;
+      --text: #17243a;
+      --muted: #65748b;
+      --border: #e1e7f0;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: var(--light);
+      color: var(--text);
+    }
+
+    a { color: inherit; text-decoration: none; }
+
+    .topbar {
+      background: var(--navy);
+      color: white;
+      padding: 12px 6%;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      font-size: 13px;
+    }
+
+    .topbar span:last-child { color: #c7d7f2; }
+
+    header {
+      background: white;
+      padding: 18px 6%;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 20px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .logo {
+      width: 46px;
+      height: 46px;
+      display: grid;
+      place-items: center;
+      background: var(--blue);
+      color: white;
+      font-size: 25px;
+      border-radius: 13px;
+    }
+
+    .brand h1 { font-size: 22px; margin: 0; }
+    .brand p { font-size: 12px; margin: 4px 0 0; color: var(--muted); }
+
+    nav { display: flex; gap: 22px; flex-wrap: wrap; }
+    nav a { font-size: 14px; font-weight: 600; }
+    nav a:hover { color: var(--blue); }
+
+    .hero {
+      background: linear-gradient(125deg, #071b35, #124ca5);
+      color: white;
+      padding: 64px 6% 82px;
+    }
+
+    .hero-inner { max-width: 1100px; margin: auto; }
+
+    .eyebrow {
+      display: inline-block;
+      padding: 8px 12px;
+      border: 1px solid #567bb7;
+      border-radius: 30px;
+      color: #dbe8ff;
+      font-size: 12px;
+      letter-spacing: .4px;
+    }
+
+    .hero h2 {
+      max-width: 700px;
+      font-size: clamp(34px, 5vw, 54px);
+      line-height: 1.12;
+      margin: 22px 0 16px;
+    }
+
+    .hero h2 span { color: #8fc4ff; }
+
+    .hero p {
+      max-width: 620px;
+      line-height: 1.8;
+      color: #d5e2f7;
+      font-size: 16px;
+    }
+
+    .hero-note { font-size: 12px !important; color: #b9cbea !important; }
+
+    .content {
+      width: 88%;
+      max-width: 1120px;
+      margin: -38px auto 60px;
+      position: relative;
+    }
+
+    .search-panel {
+      background: white;
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 24px;
+      box-shadow: 0 12px 36px #142b4b12;
+    }
+
+    .tabs { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 24px; }
+
+    .tab {
+      border: 1px solid var(--border);
+      background: white;
+      color: var(--text);
+      padding: 11px 16px;
+      border-radius: 9px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .tab.active { background: var(--blue); color: white; border-color: var(--blue); }
+
+    .search-panel h3 { margin: 0 0 8px; font-size: 21px; }
+    .search-panel .sub { color: var(--muted); font-size: 13px; margin: 0 0 22px; }
+
+    .search-form {
+      display: flex;
+      gap: 12px;
+      align-items: end;
+    }
+
+    .field { flex: 1; min-width: 0; }
+    .field label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 9px; }
+
+    input {
+      width: 100%;
+      padding: 14px;
+      border: 1px solid #d7dfeb;
+      border-radius: 9px;
+      font-size: 15px;
+      outline: none;
+    }
+
+    input:focus { border-color: var(--blue); box-shadow: 0 0 0 3px #1459d91a; }
+
+    .primary {
+      padding: 15px 22px;
+      border: 0;
+      border-radius: 9px;
+      background: var(--blue);
+      color: white;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
+    .primary:hover { background: #1048b3; }
+    .message { margin-top: 16px; font-size: 14px; line-height: 1.6; }
+    .hidden { display: none !important; }
+
+    .section-heading { margin: 42px 0 18px; }
+    .section-heading h3 { margin: 0 0 8px; font-size: 24px; }
+    .section-heading p { color: var(--muted); margin: 0; font-size: 14px; }
+
+    .cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+
+    .card {
+      background: white;
+      border: 1px solid var(--border);
+      border-radius: 15px;
+      padding: 22px;
+      transition: transform .2s, box-shadow .2s;
+    }
+
+    .card:hover { transform: translateY(-3px); box-shadow: 0 10px 25px #142b4b0d; }
+
+    .card-icon {
+      width: 44px; height: 44px; border-radius: 12px;
+      display: grid; place-items: center; background: #eaf1ff;
+      font-size: 22px; margin-bottom: 17px;
+    }
+
+    .card h4 { margin: 0 0 9px; font-size: 17px; }
+    .card p { margin: 0; font-size: 13px; color: var(--muted); line-height: 1.7; }
+
+    .news {
+      background: white; border: 1px solid var(--border);
+      border-radius: 15px; padding: 24px; margin-top: 18px;
+    }
+
+    .news-item { padding: 16px 0; border-bottom: 1px solid var(--border); }
+    .news-item:last-child { border-bottom: 0; padding-bottom: 0; }
+    .news-item strong { display: block; margin-bottom: 6px; }
+    .news-item p { margin: 0; color: var(--muted); font-size: 13px; line-height: 1.6; }
+
+    footer {
+      background: var(--navy); color: #d1dced;
+      padding: 28px 6%; font-size: 12px; line-height: 1.8;
+    }
+
+    footer strong { color: white; }
+
+    @media (max-width: 760px) {
+      header { align-items: flex-start; flex-direction: column; }
+      nav { gap: 12px; }
+      .hero { padding: 45px 6% 70px; }
+      .content { width: 92%; }
+      .search-form { flex-direction: column; align-items: stretch; }
+      .search-form .primary { width: 100%; }
+      .cards { grid-template-columns: 1fr; }
+      .search-panel { padding: 18px; }
+      .topbar { padding: 11px 5%; }
+    }
+  </style>
+</head>
+<body>
+  <div class="topbar">
+    <span>🇮🇳 Indian Railways Information Portal</span>
+    <span>Inform • Track • Travel</span>
+  </div>
+
+  <header>
+    <a class="brand" href="/">
+      <div class="logo">🚆</div>
+      <div>
+        <h1>Rail Darpan</h1>
+        <p>Your Ultimate Indian Railways Companion</p>
+      </div>
+    </a>
+    <nav>
+      <a href="#services">Services</a>
+      <a href="#updates">Railway Updates</a>
+      <a href="#about">About</a>
+    </nav>
+  </header>
+
+  <section class="hero">
+    <div class="hero-inner">
+      <span class="eyebrow">YOUR JOURNEY, MADE SIMPLER</span>
+      <h2>Indian Railways, <span>all in one place.</span></h2>
+      <p>Check your PNR status, follow live train movements, explore train schedules and stay informed about railway updates — all from one simple portal.</p>
+      <p class="hero-note">Train information depends on available data services. Verify important travel updates with official railway sources.</p>
+    </div>
+  </section>
+
+  <main class="content">
+    <section class="search-panel" id="search">
+      <div class="tabs">
+        <button class="tab active" data-mode="pnr">PNR Status</button>
+        <button class="tab" data-mode="live">Live Train Status</button>
+        <button class="tab" data-mode="schedule">Train Schedule</button>
+      </div>
+
+      <h3 id="formTitle">Check your PNR status</h3>
+      <p class="sub" id="formSub">Enter your 10-digit PNR number to check your booking details.</p>
+
+      <form class="search-form" id="searchForm">
+        <div class="field">
+          <label id="inputLabel" for="searchInput">PNR Number</label>
+          <input id="searchInput" type="text" inputmode="numeric" autocomplete="off" placeholder="Enter 10-digit PNR" maxlength="10" required>
+        </div>
+        <button class="primary" id="searchButton" type="submit">Check PNR →</button>
+      </form>
+      <div id="result" class="message" role="status" aria-live="polite"></div>
+    </section>
+
+    <section id="services">
+      <div class="section-heading">
+        <h3>Railway services</h3>
+        <p>Essential train information, together in one place.</p>
+      </div>
+
+      <div class="cards">
+        <a class="card" href="#search" data-select="pnr">
+          <div class="card-icon">🎫</div>
+          <h4>PNR Status</h4>
+          <p>Check booking status and allotted coach or berth details when provided by the data service.</p>
+        </a>
+        <a class="card" href="#search" data-select="live">
+          <div class="card-icon">📍</div>
+          <h4>Live Train Status</h4>
+          <p>Look up a train's reported running status and delays when live data is available.</p>
+        </a>
+        <a class="card" href="#search" data-select="schedule">
+          <div class="card-icon">🗓️</div>
+          <h4>Train Schedule</h4>
+          <p>Explore scheduled stops and timings using the train number.</p>
+        </a>
+        <div class="card">
+          <div class="card-icon">🚉</div>
+          <h4>Station Information</h4>
+          <p>Find station information and live departures or arrivals when supported.</p>
+        </div>
+        <div class="card">
+          <div class="card-icon">⚠️</div>
+          <h4>Disruptions & Alerts</h4>
+          <p>Planned section works, cancellations and diversions will be shown when verified information is available.</p>
+        </div>
+        <div class="card">
+          <div class="card-icon">📰</div>
+          <h4>Railway News</h4>
+          <p>Follow railway announcements with publication dates and links to their original sources.</p>
+        </div>
+      </div>
+    </section>
+
+<section id="station-tools">
+  <div class="section-heading">
+    <h3>Station Explorer</h3>
+    <p>Search Indian railway stations and check available live information.</p>
+  </div>
+
+  <div class="search-panel">
+    <form id="stationSearchForm" class="search-form">
+      <div class="field">
+        <label for="stationQuery">Station name or keyword</label>
+        <input id="stationQuery" type="text" minlength="2"
+          placeholder="For example, Delhi or New Delhi" required>
+      </div>
+      <button class="primary" type="submit">Search Stations →</button>
+    </form>
+
+    <div id="stationResults" aria-live="polite"></div>
+
+    <hr style="border:0;border-top:1px solid #e1e7f0;margin:24px 0">
+
+    <form id="stationLiveForm" class="search-form">
+      <div class="field">
+        <label for="stationCode">Station code</label>
+        <input id="stationCode" type="text" maxlength="10"
+          placeholder="For example, DLI" required>
+      </div>
+      <div class="field">
+        <label for="stationHours">Hours to check</label>
+        <select id="stationHours" style="width:100%;padding:14px;border:1px solid #d7dfeb;border-radius:9px">
+          <option value="2">Next 2 hours</option>
+          <option value="4" selected>Next 4 hours</option>
+          <option value="8">Next 8 hours</option>
+          <option value="12">Next 12 hours</option>
+          <option value="24">Next 24 hours</option>
+        </select>
+      </div>
+      <button class="primary" type="submit">Check Station →</button>
+    </form>
+
+    <div id="stationLiveResults" aria-live="polite"></div>
+  </div>
+</section>
+ 
+<section id="railway-news">
+  <div class="section-heading">
+    <h3>Railway News & Official Updates</h3>
+    <p>Indian Railways की घोषणाएँ और महत्वपूर्ण अपडेट आधिकारिक स्रोतों से देखें।</p>
+  </div>
+
+  <div class="services-grid">
+    <article class="service-card">
+      <h4>Ministry of Railways News</h4>
+      <p>रेलवे की योजनाएँ, नई घोषणाएँ, सुरक्षा और यात्री सुविधाओं से जुड़ी प्रेस रिलीज़।</p>
+      <a href="https://www.pib.gov.in/allrelease.aspx?lang=1&amp;reg=3"
+         target="_blank" rel="noopener noreferrer">
+        View Official News →
+      </a>
+    </article>
+
+    <article class="service-card">
+      <h4>Railway Board</h4>
+      <p>रेलवे बोर्ड की आधिकारिक वेबसाइट पर निर्देश, दस्तावेज़ और विभागीय जानकारी देखें।</p>
+      <a href="https://indianrailways.gov.in/railwayboard/"
+         target="_blank" rel="noopener noreferrer">
+        Visit Railway Board →
+      </a>
+    </article>
+
+    <article class="service-card">
+      <h4>Railway Recruitment</h4>
+      <p>भर्ती से जुड़े नोटिस, परीक्षा और परिणाम के लिए आधिकारिक RRB पोर्टल देखें।</p>
+      <a href="https://rrb.indianrailways.gov.in/"
+         target="_blank" rel="noopener noreferrer">
+        Visit RRB Portal →
+      </a>
+    </article>
+  </div>
+
+  <p class="result-label">
+    Note: ये आधिकारिक वेबसाइटों के लिंक हैं। Rail Darpan पर अभी अपने-आप लाइव न्यूज़ डाउनलोड नहीं हो रही है।
+  </p>
+</section>
+
+    <section id="updates">
+      <div class="section-heading">
+        <h3>Railway updates</h3>
+        <p>Verified information matters. Live news integration will be added in a later step.</p>
+      </div>
+      <div class="news">
+        <div class="news-item">
+          <strong>Official railway announcements</strong>
+          <p>Updates will appear here after a reliable source is connected. This page does not yet fetch live news.</p>
+        </div>
+        <div class="news-item">
+          <strong>Before you travel</strong>
+          <p>For urgent changes, confirm train running information and notices through official Indian Railways channels.</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="about">
+      <div class="section-heading">
+        <h3>About Rail Darpan</h3>
+      </div>
+      <div class="news">
+        <p style="color:var(--muted);line-height:1.8;margin:0">
+          Rail Darpan is an independent railway information portal concept. It is not an official Indian Railways or IRCTC website. Information availability and accuracy depend on connected data providers.
+        </p>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <strong>Rail Darpan</strong><br>
+    Your Ultimate Indian Railways Companion<br>
+    Independent information portal • Not affiliated with Indian Railways or IRCTC.
+  </footer>
+
+  <script src="/app.js" defer></script>
+</body>
+</html>
+
