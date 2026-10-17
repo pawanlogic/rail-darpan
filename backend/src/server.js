@@ -129,73 +129,112 @@ app.get("/api/station/:code/live", async (req, res) => {
   }
 });
 
-// Official railway news via PIB RSS
+// Official railway news from PIB
 app.get("/api/news", async (req, res) => {
-  const feedUrl =
-    "https://pib.gov.in/RssMain.aspx?ModId=6&Lang=1&Regid=3";
+  const sourceUrl =
+    "https://www.pib.gov.in/AllRelease.aspx?lang=1&reg=3";
 
   try {
-    const response = await fetch(feedUrl, {
+    const response = await fetch(sourceUrl, {
       headers: {
-        Accept: "application/rss+xml, application/xml, text/xml"
+        Accept: "text/html,application/xhtml+xml",
+        "User-Agent": "Mozilla/5.0 RailDarpan/1.0"
       },
-      signal: AbortSignal.timeout(10000)
+      signal: AbortSignal.timeout(15000)
     });
 
     if (!response.ok) {
-      throw new Error(`News source returned HTTP ${response.status}`);
+      throw new Error(`PIB returned HTTP ${response.status}`);
     }
 
-    const xml = await response.text();
+    const html = await response.text();
 
-    function decode(value) {
+    function cleanText(value) {
       return value
-        .replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, "$1")
-        .replace(/<[^>]*>/g, "")
-        .replace(/&amp;/g, "&")
-        .replace(/&quot;/g, '"')
-        .replace(/&#39;|&apos;/g, "'")
-        .replace(/&lt;/g, "<")
-        .replace(/&gt;/g, ">")
+        .replace(/<[^>]*>/g, " ")
+        .replace(/&nbsp;/gi, " ")
+        .replace(/&amp;/gi, "&")
+        .replace(/&quot;/gi, '"')
+        .replace(/&#39;|&apos;/gi, "'")
+        .replace(/&lt;/gi, "<")
+        .replace(/&gt;/gi, ">")
+        .replace(/&#(\d+);/g, (_, n) =>
+          String.fromCodePoint(Number(n))
+        )
+        .replace(/&#x([0-9a-f]+);/gi, (_, n) =>
+          String.fromCodePoint(parseInt(n, 16))
+        )
+        .replace(/\s+/g, " ")
         .trim();
     }
 
-    function getTag(item, tag) {
-      const regex = new RegExp(
-        "<" + tag + "\\b[^>]*>([\\s\\S]*?)</" + tag + "\\s*>",
-        "i"
-      );
+    // PIB page offers a ministry selector; filter using its official ID.
+    const filteredUrl =
+      "https://www.pib.gov.in/AllRelease.aspx?MinId=23&lang=1&reg=3";
 
-      const match = item.match(regex);
-      return match ? decode(match[1]) : "";
+    const filteredResponse = await fetch(filteredUrl, {
+      headers: {
+        Accept: "text/html,application/xhtml+xml",
+        "User-Agent": "Mozilla/5.0 RailDarpan/1.0"
+      },
+      signal: AbortSignal.timeout(15000)
+    });
+
+    if (!filteredResponse.ok) {
+      throw new Error(`PIB ministry page returned HTTP ${filteredResponse.status}`);
     }
 
-    const items = [...xml.matchAll(/<item\b[^>]*>([\s\S]*?)<\/item>/gi)]
-      .slice(0, 15)
+    const filteredHtml = await filteredResponse.text();
+
+    const entries = [
+      ...filteredHtml.matchAll(
+        /<li\b[^>]*>([\s\S]*?)<\/li\s*>/gi
+      )
+    ];
+
+    const items = entries
       .map((match) => {
-        const item = match[1];
+        const entry = match[1];
+        const anchor = entry.match(
+          /<a\b[^>]*href\s*=\s*["']([^"']*PressReleseDetail\.aspx\?[^"']+)["'][^>]*>([\s\S]*?)<\/a\s*>/i
+        );
+
+        if (!anchor) return null;
+
+        const title = cleanText(anchor[2]);
+        const link = new URL(anchor[1], "https://www.pib.gov.in");
+        const entryText = cleanText(entry);
+        const dateMatch = entryText.match(
+          /Posted\s+on:\s*(\d{1,2}\s+[A-Za-z]{3,9}\s+\d{4})/i
+        );
+
+        if (!title || link.hostname !== "www.pib.gov.in") {
+          return null;
+        }
 
         return {
-          title: getTag(item, "title"),
-          link: getTag(item, "link"),
-          date: getTag(item, "pubDate"),
-          description: getTag(item, "description")
+          title,
+          link: link.href,
+          date: dateMatch ? dateMatch[1] : "",
+          description: ""
         };
       })
-      .filter((item) => {
-        return item.title && /^https?:\/\//i.test(item.link);
-      });
+      .filter(Boolean)
+      .slice(0, 15);
+
+    if (items.length === 0) {
+      throw new Error("No releases found on PIB ministry page");
+    }
 
     res.json({
       success: true,
-      source: "Press Information Bureau RSS",
-      sourceUrl: feedUrl,
+      source: "Press Information Bureau — Ministry of Railways",
+      sourceUrl: filteredUrl,
       count: items.length,
       items
     });
   } catch (error) {
     console.error("Railway news error:", error.message);
-
     res.status(502).json({
       success: false,
       error: "Official railway news is temporarily unavailable."
