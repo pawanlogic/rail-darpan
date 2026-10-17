@@ -223,6 +223,74 @@ function renderResult(data) {
   result.appendChild(panel);
 }
 
+const officialPnrUrl = atob("aHR0cHM6Ly93d3cuaW5kaWFucmFpbC5nb3YuaW4vZW5xdWlyeS9QTlIvUG5yRW5xdWlyeS5odG1sP2xvY2FsZT1lbg==");
+
+const pnrHistoryKey = "raildarpan_pnr_history";
+const pnrHistoryList = document.getElementById("pnrHistoryList");
+const clearPnrHistoryButton = document.getElementById("clearPnrHistory");
+
+function getPnrHistory() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(pnrHistoryKey) || "[]");
+    return Array.isArray(saved) ? saved : [];
+  } catch {
+    return [];
+  }
+}
+
+function renderPnrHistory() {
+  if (!pnrHistoryList) return;
+  pnrHistoryList.replaceChildren();
+
+  const history = getPnrHistory();
+
+  if (!history.length) {
+    addText(pnrHistoryList, "p", "No recent PNR searches yet.");
+    return;
+  }
+
+  history.forEach(item => {
+    const row = document.createElement("div");
+    row.className = "result-item";
+    row.style.marginTop = "10px";
+
+    addText(row, "strong", `PNR: ${item.pnr}`, "result-value");
+
+    const date = new Date(item.checkedAt);
+    addText(
+      row,
+      "p",
+      Number.isNaN(date.getTime()) ? "" : `Checked: ${date.toLocaleString()}`,
+      "result-label"
+    );
+
+    pnrHistoryList.appendChild(row);
+  });
+}
+
+function savePnrHistory(pnr) {
+  try {
+    const history = getPnrHistory().filter(item => item.pnr !== pnr);
+    history.unshift({ pnr, checkedAt: new Date().toISOString() });
+    localStorage.setItem(pnrHistoryKey, JSON.stringify(history.slice(0, 10)));
+    renderPnrHistory();
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+if (clearPnrHistoryButton) {
+  clearPnrHistoryButton.addEventListener("click", () => {
+    try {
+      localStorage.removeItem(pnrHistoryKey);
+    } catch {}
+    renderPnrHistory();
+  });
+}
+
+renderPnrHistory();
+
 form.addEventListener("submit", async event => {
   event.preventDefault();
 
@@ -234,14 +302,28 @@ form.addEventListener("submit", async event => {
     return;
   }
 
-  if (currentMode !== "pnr" && !/^\d{1,10}$/.test(value)) {
+  if (currentMode === "pnr") {
+    savePnrHistory(value);
+
+    const officialTab = window.open(officialPnrUrl, "_blank");
+    if (officialTab) officialTab.opener = null;
+    result.replaceChildren();
+    addText(
+      result,
+      "p",
+      "PNR search saved in this browser's history. The official Indian Railways PNR page has been opened in a new tab. Enter your PNR there to view its current status.",
+      "result-success"
+    );
+    return;
+  }
+
+  if (!/^\d{1,10}$/.test(value)) {
     result.replaceChildren();
     addText(result, "p", "Please enter a valid train number.", "result-error");
     return;
   }
 
   let endpoint = "";
-  if (currentMode === "pnr") endpoint = `/api/pnr/${value}`;
   if (currentMode === "live") endpoint = `/api/train/${value}/live`;
   if (currentMode === "schedule") endpoint = `/api/train/${value}/schedule`;
 
@@ -502,4 +584,7 @@ async function loadRailwayNews() {
 }
 
 loadRailwayNews();
+
+
+  "https://www.indianrail.gov.in/enquiry/PNR/PnrEnquiry.html?locale=en";
 
