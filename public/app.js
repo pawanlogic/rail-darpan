@@ -183,9 +183,9 @@ function renderObject(obj, parent, depth = 0) {
   }
 
   nested.forEach(([key, value]) => {
-    const details = document.createElement("details");
+    const details = document.createElement("section");
     details.className = "result-details";
-    addText(details, "summary", `${labelize(key)}${Array.isArray(value) ? ` (${value.length})` : ""}`);
+    addText(details, "h4", `${labelize(key)}${Array.isArray(value) ? ` (${value.length})` : ""}`);
     renderObject(value, details, depth + 1);
     parent.appendChild(details);
   });
