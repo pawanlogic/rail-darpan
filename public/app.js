@@ -584,7 +584,3 @@ async function loadRailwayNews() {
 }
 
 loadRailwayNews();
-
-
-  "https://www.indianrail.gov.in/enquiry/PNR/PnrEnquiry.html?locale=en";
-
