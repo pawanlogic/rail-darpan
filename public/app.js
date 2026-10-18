@@ -357,145 +357,597 @@ function rdLiveField(obj, aliases) {
   return rdLiveText(rdLiveFind(obj, aliases));
 }
 
-function renderCompactLiveStatus(data, payload, panel) {
-  panel.classList.add("live-result-panel");
 
-  const trainContainer = rdLiveFind(payload, [
-    "trainDetails", "train_details", "trainInfo", "train_info"
+/* RAIL DARPAN LIVE DETAILS V3 */
+function rdLiveV3Key(key) {
+  return String(key).replace(/([a-z0-9])([A-Z])/g, "$1_$2")
+    .toLowerCase().replace(/[^a-z0-9]/g, "");
+}
+
+function rdLiveV3Find(obj, aliases, depth = 0) {
+  if (!obj || typeof obj !== "object" || depth > 7) return undefined;
+
+  if (!Array.isArray(obj)) {
+    const entries = Object.entries(obj);
+
+    for (const alias of aliases) {
+      const match = entries.find(([key, value]) =>
+        rdLiveV3Key(key) === rdLiveV3Key(alias) &&
+        value !== undefined && value !== null && value !== ""
+      );
+      if (match) return match[1];
+    }
+
+    for (const [, value] of entries) {
+      if (value && typeof value === "object") {
+        const found = rdLiveV3Find(value, aliases, depth + 1);
+        if (found !== undefined) return found;
+      }
+    }
+  } else {
+    for (const value of obj.slice(0, 150)) {
+      if (value && typeof value === "object") {
+        const found = rdLiveV3Find(value, aliases, depth + 1);
+        if (found !== undefined) return found;
+      }
+    }
+  }
+
+  return undefined;
+}
+
+function rdLiveV3Text(value, depth = 0) {
+  if (value === undefined || value === null || value === "") return "";
+  if (typeof value !== "object") return String(value);
+  if (depth > 4 || Array.isArray(value)) return "";
+
+  const preferred = [
+    "stationName", "station_name", "trainName", "train_name",
+    "name", "label", "stationCode", "station_code", "code",
+    "title", "text", "value", "displayName", "display_name",
+    "minutes", "duration", "platformNumber", "platform_number"
+  ];
+
+  const entries = Object.entries(value);
+
+  for (const alias of preferred) {
+    const match = entries.find(([key, item]) =>
+      rdLiveV3Key(key) === rdLiveV3Key(alias) &&
+      item !== undefined && item !== null &&
+      typeof item !== "object" && String(item).trim() !== ""
+    );
+    if (match) return String(match[1]);
+  }
+
+  for (const [, item] of entries) {
+    if (item && typeof item === "object") {
+      const text = rdLiveV3Text(item, depth + 1);
+      if (text) return text;
+    }
+  }
+
+  return "";
+}
+
+function rdLiveV3Value(obj, aliases) {
+  return rdLiveV3Text(rdLiveV3Find(obj, aliases));
+}
+
+function rdLiveV3Minutes(raw) {
+  if (raw && typeof raw === "object") {
+    const h = rdLiveV3Find(raw, ["hours", "hour", "hrs", "hr"]);
+    const m = rdLiveV3Find(raw, ["minutes", "minute", "mins", "min"]);
+    if (h !== undefined || m !== undefined) {
+      return Number(h || 0) * 60 + Number(m || 0);
+    }
+  }
+
+  const text = rdLiveV3Text(raw).trim();
+  if (!text) return null;
+
+  const hourMatch = text.match(/(\d+(?:\.\d+)?)\s*(?:hours?|hrs?|h)\b/i);
+  const minMatch = text.match(/(\d+(?:\.\d+)?)\s*(?:minutes?|mins?|m)\b/i);
+
+  if (hourMatch || minMatch) {
+    return (hourMatch ? Number(hourMatch[1]) * 60 : 0) +
+           (minMatch ? Number(minMatch[1]) : 0);
+  }
+
+  const hm = text.match(/^([+-]?\d{1,3}):([0-5]\d)$/);
+  if (hm) {
+    const sign = hm[1].startsWith("-") ? -1 : 1;
+    return sign * (Math.abs(Number(hm[1])) * 60 + Number(hm[2]));
+  }
+
+  if (/^[+-]?\d+(?:\.\d+)?$/.test(text)) return Number(text);
+  return null;
+}
+
+function rdLiveV3DurationLabel(minutes) {
+  const whole = Math.round(Math.abs(minutes));
+  const hours = Math.floor(whole / 60);
+  const mins = whole % 60;
+  if (hours) return `${hours} hr ${mins} min`;
+  return `${mins} min`;
+}
+
+function rdLiveV3Delay(raw) {
+  const text = rdLiveV3Text(raw).trim();
+  if (!text) return "Not available";
+
+  const minutes = rdLiveV3Minutes(raw);
+  if (minutes === null) {
+    if (/on.?time|no delay/i.test(text)) return "On time";
+    return text;
+  }
+
+  if (minutes === 0) return "On time";
+
+  const early = minutes < 0 || /\b(early|ahead)\b/i.test(text);
+  return `${rdLiveV3DurationLabel(minutes)} ${early ? "early" : "late"}`;
+}
+
+function rdLiveV3Time(raw) {
+  let text = rdLiveV3Text(raw).trim();
+  if (!text) return "";
+
+  const clock12 = text.match(/^(\d{1,2}):([0-5]\d)\s*(AM|PM)$/i);
+  if (clock12) {
+    let hour = Number(clock12[1]) % 12;
+    if (clock12[3].toUpperCase() === "PM") hour += 12;
+    return `${String(hour).padStart(2, "0")}:${clock12[2]}`;
+  }
+
+  if (/^\d{3,4}$/.test(text)) {
+    text = text.padStart(4, "0");
+    const hh = Number(text.slice(0, 2));
+    const mm = Number(text.slice(2, 4));
+    if (hh < 24 && mm < 60) return `${text.slice(0, 2)}:${text.slice(2, 4)}`;
+  }
+
+  const match = text.match(/\b(\d{1,2}):([0-5]\d)(?::\d{2})?\b/);
+  if (match) return `${match[1].padStart(2, "0")}:${match[2]}`;
+
+  if (/^\d{4}-\d{2}-\d{2}T/.test(text)) {
+    const date = new Date(text);
+    if (!Number.isNaN(date.getTime())) {
+      return date.toLocaleTimeString("en-IN", {
+        timeZone: "Asia/Kolkata",
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: false
+      });
+    }
+  }
+
+  return text;
+}
+
+function rdLiveV3ClockMinutes(raw) {
+  const text = rdLiveV3Text(raw).trim();
+  if (!text) return null;
+
+  if (/^\d{4}-\d{2}-\d{2}T/.test(text)) {
+    const parsed = Date.parse(text);
+    return Number.isNaN(parsed) ? null : parsed / 60000;
+  }
+
+  const time = rdLiveV3Time(text);
+  const m = time.match(/^(\d{1,2}):([0-5]\d)$/);
+  return m ? Number(m[1]) * 60 + Number(m[2]) : null;
+}
+
+function rdLiveV3StopName(stop) {
+  if (typeof stop === "string") return stop;
+
+  return rdLiveV3Value(stop, [
+    "stationName", "station_name", "stopName", "stop_name",
+    "station", "name", "label", "stationCode", "station_code", "code"
+  ]);
+}
+
+function rdLiveV3Platform(stop) {
+  const raw = rdLiveV3Find(stop, [
+    "platformNumber", "platform_number", "platformNo", "platform_no",
+    "arrivalPlatform", "arrival_platform", "platformName", "platform_name",
+    "platform"
   ]);
 
-  const searchInput = document.getElementById("searchInput");
-  const enteredNumber = searchInput ? searchInput.value.trim() : "";
+  if (raw === undefined || raw === null || raw === "") return "";
+  if (typeof raw !== "object") return String(raw);
 
-  const number = rdLiveField(payload, [
+  return rdLiveV3Text(raw);
+}
+
+function rdLiveV3Halt(stop) {
+  const raw = rdLiveV3Find(stop, [
+    "haltDuration", "halt_duration", "stoppageDuration",
+    "stoppage_duration", "stopDuration", "stop_duration",
+    "dwellTime", "dwell_time", "haltMinutes", "halt_minutes",
+    "stoppageMinutes", "stoppage_minutes", "halt", "stoppage"
+  ]);
+
+  if (raw !== undefined && raw !== null && typeof raw !== "boolean") {
+    const explicit = rdLiveV3Minutes(raw);
+    if (explicit !== null) return rdLiveV3DurationLabel(explicit);
+  }
+
+  const arrival = rdLiveV3Find(stop, [
+    "actualArrival", "actual_arrival", "expectedArrival", "expected_arrival",
+    "scheduledArrival", "scheduled_arrival", "arrivalTime", "arrival_time",
+    "arrival", "arr"
+  ]);
+
+  const departure = rdLiveV3Find(stop, [
+    "actualDeparture", "actual_departure", "expectedDeparture", "expected_departure",
+    "scheduledDeparture", "scheduled_departure", "departureTime", "departure_time",
+    "departure", "dep"
+  ]);
+
+  const a = rdLiveV3ClockMinutes(arrival);
+  const d = rdLiveV3ClockMinutes(departure);
+  if (a === null || d === null) return "Not available";
+
+  let duration = d - a;
+  if (a < 10000000 && d < 10000000) duration = (duration + 1440) % 1440;
+  if (duration < 0 || duration > 2880) return "Not available";
+  return rdLiveV3DurationLabel(duration);
+}
+
+function rdLiveV3StopMatches(stop, targets) {
+  const normalize = value => String(value || "").toLowerCase()
+    .replace(/[^a-z0-9]/g, "");
+
+  const name = rdLiveV3StopName(stop);
+  const code = rdLiveV3Value(stop, [
+    "stationCode", "station_code", "code", "stationId", "station_id"
+  ]);
+
+  return targets.filter(Boolean).some(target => {
+    const t = normalize(target);
+    const n = normalize(name);
+    const c = normalize(code);
+    return t && (t === n || t === c);
+  });
+}
+
+function rdLiveV3Row(stop, index) {
+  const row = document.createElement("div");
+  row.className = "live-v3-stop";
+
+  const left = document.createElement("div");
+  addText(left, "div", rdLiveV3StopName(stop) || `Stop ${index + 1}`,
+    "live-v3-stop-name");
+
+  const arrival = rdLiveV3Time(rdLiveV3Find(stop, [
+    "actualArrival", "actual_arrival", "expectedArrival", "expected_arrival",
+    "scheduledArrival", "scheduled_arrival", "arrivalTime", "arrival_time",
+    "arrival", "arr"
+  ]));
+
+  const departure = rdLiveV3Time(rdLiveV3Find(stop, [
+    "actualDeparture", "actual_departure", "expectedDeparture", "expected_departure",
+    "scheduledDeparture", "scheduled_departure", "departureTime", "departure_time",
+    "departure", "dep"
+  ]));
+
+  const halt = rdLiveV3Halt(stop);
+
+  const timing = [
+    arrival ? `Arr ${arrival}` : "Arr —",
+    departure ? `Dep ${departure}` : "Dep —",
+    `Halt ${halt}`
+  ].join(" · ");
+
+  addText(left, "div", timing, "live-v3-stop-meta");
+  row.appendChild(left);
+
+  const platform = rdLiveV3Platform(stop);
+  addText(row, "span",
+    platform ? `Platform ${platform}` : "Platform unavailable",
+    "live-v3-platform");
+
+  return row;
+}
+
+function renderCompactLiveStatus(data, payload, panel) {
+  if (!document.getElementById("rd-live-details-v3-style")) {
+    const style = document.createElement("style");
+    style.id = "rd-live-details-v3-style";
+    style.textContent = `
+      .live-v3-head {
+        display:flex; justify-content:space-between; align-items:flex-start;
+        flex-wrap:wrap; gap:9px; margin-bottom:13px;
+      }
+      .live-v3-subtitle {
+        font-size:12px; color:#64748b; line-height:1.5;
+        overflow-wrap:anywhere; margin-top:4px;
+      }
+      .live-v3-badge {
+        flex:0 0 auto; border-radius:999px; padding:7px 10px;
+        background:#eef2f7; color:#334155; font-size:11px; font-weight:750;
+      }
+      .live-v3-badge.good { background:#dcfce7; color:#166534; }
+      .live-v3-badge.warn { background:#fef3c7; color:#92400e; }
+      .live-v3-badge.bad { background:#fee2e2; color:#991b1b; }
+      .live-v3-grid {
+        display:grid; grid-template-columns:repeat(2,minmax(0,1fr));
+        gap:9px; margin:12px 0;
+      }
+      .live-v3-card {
+        min-width:0; border:1px solid #e2e8f0; border-radius:11px;
+        background:#fff; padding:12px;
+      }
+      .live-v3-label {
+        display:block; color:#64748b; font-size:11px; margin-bottom:6px;
+      }
+      .live-v3-value {
+        display:block; color:#102a43; font-size:14px; line-height:1.45;
+        font-weight:750; overflow-wrap:anywhere;
+      }
+      .live-v3-section {
+        margin-top:13px; padding:12px; border:1px solid #e2e8f0;
+        border-radius:12px; background:#fff;
+      }
+      .live-v3-section-title { margin:0 0 9px; font-size:14px; color:#173b57; }
+      .live-v3-stop {
+        display:grid; grid-template-columns:minmax(0,1fr) auto;
+        gap:9px; align-items:center; padding:11px 0;
+        border-top:1px solid #edf1f5;
+      }
+      .live-v3-stop:first-of-type { border-top:0; }
+      .live-v3-stop-name { color:#102a43; font-size:13px; font-weight:750; line-height:1.45; }
+      .live-v3-stop-meta { margin-top:5px; color:#64748b; font-size:11px; line-height:1.6; }
+      .live-v3-platform {
+        max-width:125px; padding:7px 8px; border-radius:8px;
+        background:#e9f6ff; color:#14527a; text-align:center;
+        font-size:11px; font-weight:750; overflow-wrap:anywhere;
+      }
+      .live-v3-details {
+        margin-top:11px; border:1px solid #e2e8f0;
+        border-radius:10px; background:#fff; padding:0 12px;
+      }
+      .live-v3-details summary {
+        cursor:pointer; padding:12px 0; color:#173b57;
+        font-size:13px; font-weight:750;
+      }
+      .live-v3-scroll { max-height:280px; overflow:auto; }
+      .live-v3-note {
+        margin:8px 0 0; padding:9px; border-radius:8px;
+        background:#fff8e7; color:#805b17; font-size:11px; line-height:1.5;
+      }
+      @media(max-width:600px) {
+        .live-v3-grid { gap:7px; }
+        .live-v3-card { padding:10px; }
+        .live-v3-stop { gap:6px; }
+        .live-v3-platform { max-width:95px; padding:6px; }
+      }
+    `;
+    document.head.appendChild(style);
+  }
+
+  panel.classList.add("live-result-panel");
+
+  const inputEl = document.getElementById("searchInput");
+  const searchedNumber = inputEl ? inputEl.value.trim() : "";
+
+  const trainName = rdLiveV3Value(payload, [
+    "trainName", "train_name", "trainTitle", "train_title"
+  ]) || `Train ${rdLiveV3Value(payload, [
     "trainNumber", "train_number", "trainNo", "train_no"
-  ]) || enteredNumber;
+  ]) || searchedNumber}`.trim();
 
-  const name = (
-    rdLiveField(payload, ["trainName", "train_name", "trainTitle", "train_title"]) ||
-    rdLiveField(trainContainer, ["trainName", "train_name", "name", "title"]) ||
-    (number ? `Train ${number}` : "Live Train Status")
-  );
+  const trainNumber = rdLiveV3Value(payload, [
+    "trainNumber", "train_number", "trainNo", "train_no"
+  ]) || searchedNumber;
 
-  const current = rdLiveField(payload, [
+  const status = rdLiveV3Value(payload, [
+    "runningStatus", "running_status", "trainStatus", "train_status", "status"
+  ]) || "Status unavailable";
+
+  const currentName = rdLiveV3Value(payload, [
     "currentLocation", "current_location", "currentStation",
-    "current_station", "currentPosition", "current_position",
-    "currentStop", "current_stop", "presentStation", "present_station"
+    "current_station", "presentStation", "present_station",
+    "currentStop", "current_stop"
   ]) || "Not available";
 
-  const next = rdLiveField(payload, [
-    "nextStation", "next_station", "nextHalt", "next_halt",
-    "nextStop", "next_stop", "upcomingStation", "upcoming_station"
-  ]) || "Not available";
+  const currentCode = rdLiveV3Value(payload, [
+    "currentStationCode", "current_station_code",
+    "currentLocationCode", "current_location_code"
+  ]);
 
-  let delay = rdLiveField(payload, [
+  const delayRaw = rdLiveV3Find(payload, [
     "delayMinutes", "delay_minutes", "lateBy", "late_by",
     "currentDelay", "current_delay", "delay"
   ]);
 
-  if (delay && /^-?\d+(\.\d+)?$/.test(delay)) {
-    const minutes = Number(delay);
-    delay = minutes > 0 ? `${minutes} min late`
-      : minutes < 0 ? `${Math.abs(minutes)} min early`
-      : "On time";
-  } else if (!delay) {
-    delay = "Not available";
-  }
+  const delay = rdLiveV3Delay(delayRaw);
 
-  let speed = rdLiveField(payload, [
+  let speed = rdLiveV3Value(payload, [
     "speedKmh", "speed_kmh", "currentSpeed", "current_speed", "speed"
   ]) || "Not available";
 
-  if (speed !== "Not available" && /^\d+(\.\d+)?$/.test(speed)) {
-    speed += " km/h";
-  }
+  if (/^\d+(?:\.\d+)?$/.test(speed)) speed += " km/h";
 
-  const source = rdLiveField(payload, [
+  const nextRaw = rdLiveV3Find(payload, [
+    "nextStation", "next_station", "nextHalt", "next_halt",
+    "nextStop", "next_stop", "upcomingStation", "upcoming_station"
+  ]);
+
+  const nextName = rdLiveV3Text(nextRaw);
+
+  const source = rdLiveV3Value(payload, [
     "sourceStation", "source_station", "source", "origin"
   ]);
-  const destination = rdLiveField(payload, [
+
+  const destination = rdLiveV3Value(payload, [
     "destinationStation", "destination_station", "destination", "dest"
   ]);
 
-  let status = rdLiveField(payload, [
-    "runningStatus", "running_status", "trainStatus", "train_status", "status"
-  ]) || "Status unavailable";
-  status = status.replace(/[_-]+/g, " ").replace(/\s+/g, " ").trim();
+  const routeRaw = rdLiveV3Find(payload, [
+    "route", "stops", "runningStations", "running_stations",
+    "routeStations", "route_stations", "stationList", "station_list"
+  ]);
 
-  const low = status.toLowerCase();
-  const tone = /cancel|suspend/.test(low) ? "bad"
-    : /delay|late|divert/.test(low) || /late/.test(delay.toLowerCase()) ? "warn"
-    : /running|on time|ontime|arrived|departed/.test(low) ? "good" : "";
+  const route = Array.isArray(routeRaw) ? routeRaw : [];
 
   const heading = panel.querySelector("h4");
-  if (heading) {
-    heading.textContent = name;
-    heading.classList.add("live-status-train-title");
-  }
+  if (heading) heading.textContent = trainName;
 
   const head = document.createElement("div");
-  head.className = "live-status-head";
+  head.className = "live-v3-head";
 
-  const parts = [];
-  if (number) parts.push(`Train No. ${number}`);
-  if (source && destination) parts.push(`${source} → ${destination}`);
-  if (parts.length) addText(head, "span", parts.join(" · "), "live-status-subtitle");
+  const titleSide = document.createElement("div");
+  titleSide.style.minWidth = "0";
+  titleSide.style.flex = "1";
 
-  addText(head, "span", status, `live-status-badge ${tone}`);
+  const subtitle = [
+    trainNumber ? `Train No. ${trainNumber}` : "",
+    source && destination ? `${source} → ${destination}` : ""
+  ].filter(Boolean).join(" · ");
+
+  if (subtitle) addText(titleSide, "div", subtitle, "live-v3-subtitle");
+  head.appendChild(titleSide);
+
+  const statusLow = status.toLowerCase();
+  const badgeTone =
+    /cancel|suspend/.test(statusLow) ? "bad" :
+    /divert|delay|late/.test(statusLow) || /\blate\b/i.test(delay) ? "warn" :
+    /running|on.?time|arrived|departed/.test(statusLow) ? "good" : "";
+
+  addText(head, "span", status.replace(/[_-]+/g, " "),
+    `live-v3-badge ${badgeTone}`);
   panel.appendChild(head);
 
+  let currentIndex = -1;
+  let nextIndex = -1;
+
+  const currentTargets = [currentName, currentCode].filter(Boolean);
+  const nextTargets = [nextName].filter(Boolean);
+
+  route.forEach((stop, index) => {
+    const flagged = rdLiveV3Value(stop, [
+      "isCurrent", "isCurrentStation", "currentStation"
+    ]);
+    const stopStatus = rdLiveV3Value(stop, ["status", "stopStatus", "stop_status"]);
+    if (currentIndex < 0 &&
+        (rdLiveV3StopMatches(stop, currentTargets) ||
+         /current location|current station|you are here/i.test(stopStatus) ||
+         flagged === "true")) {
+      currentIndex = index;
+    }
+
+    if (nextIndex < 0 &&
+        (rdLiveV3StopMatches(stop, nextTargets) ||
+         /\bnext station\b/i.test(stopStatus))) {
+      nextIndex = index;
+    }
+  });
+
+  const nextStopFromRoute = nextIndex >= 0
+    ? rdLiveV3StopName(route[nextIndex]) : "";
+
+  const nextDisplay = nextStopFromRoute || nextName || "Not available";
+
   const grid = document.createElement("div");
-  grid.className = "live-status-grid";
+  grid.className = "live-v3-grid";
 
   [
-    ["Current location", current],
+    ["Current location", currentName],
     ["Delay", delay],
-    ["Next station", next],
+    ["Next station", nextDisplay],
     ["Current speed", speed]
   ].forEach(([label, value]) => {
     const card = document.createElement("div");
-    card.className = "live-status-card";
-    addText(card, "span", label, "live-status-label");
-    addText(card, "strong", value, "live-status-value");
+    card.className = "live-v3-card";
+    addText(card, "span", label, "live-v3-label");
+    addText(card, "strong", value, "live-v3-value");
     grid.appendChild(card);
   });
 
   panel.appendChild(grid);
 
-  const updated = rdLiveField(payload, [
-    "lastUpdatedAt", "last_updated_at", "updatedAt", "updated_at"
-  ]);
-  if (updated) {
-    addText(panel, "p", `Last updated: ${updated}`, "live-status-note");
+  const routeStart = nextIndex >= 0
+    ? nextIndex
+    : currentIndex >= 0 ? currentIndex + 1 : -1;
+
+  if (route.length) {
+    const section = document.createElement("section");
+    section.className = "live-v3-section";
+    addText(section, "h5", "Next stations · halt · platform", "live-v3-section-title");
+
+    if (routeStart >= 0 && routeStart < route.length) {
+      route.slice(routeStart, routeStart + 3).forEach((stop, i) => {
+        section.appendChild(rdLiveV3Row(stop, routeStart + i));
+      });
+    } else if (nextRaw && typeof nextRaw === "object") {
+      section.appendChild(rdLiveV3Row(nextRaw, 0));
+      addText(section, "p",
+        "Further stop order is not confirmed by the current feed.",
+        "live-v3-note");
+    } else if (nextName) {
+      addText(section, "div", nextName, "live-v3-stop-name");
+      addText(section, "p",
+        "Arrival time, halt and platform were not supplied for this station.",
+        "live-v3-note");
+    } else {
+      addText(section, "p",
+        "Upcoming stop sequence is not confirmed by the current feed.",
+        "live-v3-note");
+    }
+
+    panel.appendChild(section);
+
+    const remainingStart = routeStart >= 0 ? routeStart + 3 : 0;
+    const remaining = route.slice(remainingStart);
+
+    if (remaining.length || routeStart < 0) {
+      const details = document.createElement("details");
+      details.className = "live-v3-details";
+      addText(details, "summary",
+        `View full route & timings · ${route.length} stops`);
+
+      const scroll = document.createElement("div");
+      scroll.className = "live-v3-scroll";
+      (routeStart >= 0 ? remaining : route).forEach((stop, i) => {
+        scroll.appendChild(rdLiveV3Row(stop, i));
+      });
+
+      details.appendChild(scroll);
+      panel.appendChild(details);
+    }
   }
 
-  const route = rdLiveFind(payload, [
-    "route", "stops", "runningStations", "running_stations",
-    "routeStations", "route_stations", "stationList", "station_list"
+  const coach = rdLiveV3Find(payload, [
+    "coachPosition", "coach_position", "coachComposition",
+    "coach_composition", "coachSequence", "coach_sequence",
+    "coachOrder", "coach_order", "coachPositionData", "coach_position_data"
   ]);
 
-  if (Array.isArray(route) && route.length) {
+  if (coach !== undefined && coach !== null && coach !== "") {
     const details = document.createElement("details");
-    details.className = "live-route-details";
-    addText(details, "summary", `View full route and timings · ${route.length} stops`);
+    details.className = "live-v3-details";
+    addText(details, "summary", "Coach position · static information");
 
-    const scroll = document.createElement("div");
-    scroll.className = "live-route-scroll";
-    renderObject(route, scroll, 0);
-    details.appendChild(scroll);
+    addText(details, "p",
+      "Coach order may not update with train movement. Confirm the latest coach display at the station before boarding.",
+      "live-v3-note");
+
+    const content = document.createElement("div");
+    content.className = "live-v3-scroll";
+
+    if (typeof coach === "object") renderObject(coach, content);
+    else addText(content, "p", String(coach));
+
+    details.appendChild(content);
     panel.appendChild(details);
   }
 
-  const alerts = rdLiveFind(payload, [
-    "alert", "alerts", "disruption", "disruptions", "cancellationMessage"
+  const updated = rdLiveV3Value(payload, [
+    "lastUpdatedAt", "last_updated_at", "updatedAt", "updated_at"
   ]);
-  const alertText = rdLiveText(alerts);
-  if (alertText) {
-    const alert = document.createElement("p");
-    alert.className = "live-status-note";
-    alert.textContent = `Service information: ${alertText}`;
-    panel.appendChild(alert);
-  }
+
+  if (updated) addText(panel, "p", `Last updated: ${updated}`);
 }
 
 function renderResult(data) {
@@ -524,14 +976,6 @@ function renderResult(data) {
   }
 
 
-  const details = document.createElement("details");
-  details.className = "result-details";
-  addText(details, "summary", "Technical response");
-  const pre = document.createElement("pre");
-  pre.className = "result-json";
-  pre.textContent = JSON.stringify(data, null, 2);
-  details.appendChild(pre);
-  panel.appendChild(details);
 
   result.appendChild(panel);
 }
