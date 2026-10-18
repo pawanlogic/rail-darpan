@@ -26,6 +26,6 @@ export const railradar = {
   stationLive: (code, hours, key) => call(`/stations/${encodeURIComponent(code)}/live`, key, {query:{hours}}),
   between: (from, to, date, key) => call(`/trains/between/${encodeURIComponent(from)}/${encodeURIComponent(to)}`, key, {query:{date}}),
   seats: (number, query, key) => call(`/trains/${encodeURIComponent(number)}/seats`, key, {query}),
-  schedule: (number, key) => call(`/trains/${encodeURIComponent(number)}/schedule`, key),
+  schedule: (number, key) => call(`/trains/${encodeURIComponent(number)}`, key),
   fare: (number, query, key) => call(`/trains/${encodeURIComponent(number)}/fare`, key, {query})
 };
