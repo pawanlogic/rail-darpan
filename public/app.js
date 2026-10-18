@@ -191,6 +191,313 @@ function renderObject(obj, parent, depth = 0) {
   });
 }
 
+
+/* RAIL DARPan COMPACT LIVE STATUS V2 */
+(function installCompactLiveStatusStyle() {
+  if (document.getElementById("rd-compact-live-style")) return;
+
+  const style = document.createElement("style");
+  style.id = "rd-compact-live-style";
+  style.textContent = `
+    .live-status-train-title {
+      font-size: 21px;
+      line-height: 1.3;
+      overflow-wrap: anywhere;
+      margin-bottom: 5px;
+    }
+    .live-status-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 13px;
+    }
+    .live-status-subtitle {
+      color: #64748b;
+      font-size: 12px;
+      line-height: 1.5;
+      overflow-wrap: anywhere;
+    }
+    .live-status-badge {
+      border-radius: 999px;
+      padding: 7px 10px;
+      background: #eef2f7;
+      color: #334155;
+      font-size: 11px;
+      font-weight: 750;
+    }
+    .live-status-badge.good { background: #dcfce7; color: #166534; }
+    .live-status-badge.warn { background: #fef3c7; color: #92400e; }
+    .live-status-badge.bad { background: #fee2e2; color: #991b1b; }
+    .live-status-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 9px;
+      margin: 10px 0 13px;
+    }
+    .live-status-card {
+      min-width: 0;
+      border: 1px solid #e2e8f0;
+      border-radius: 11px;
+      background: #fff;
+      padding: 12px;
+    }
+    .live-status-label {
+      display: block;
+      color: #64748b;
+      font-size: 11px;
+      line-height: 1.4;
+      margin-bottom: 6px;
+    }
+    .live-status-value {
+      display: block;
+      color: #102a43;
+      font-size: 14px;
+      line-height: 1.45;
+      font-weight: 750;
+      overflow-wrap: anywhere;
+    }
+    .live-status-note {
+      color: #64748b;
+      font-size: 11px;
+      line-height: 1.5;
+      margin: 8px 0 0;
+    }
+    .live-route-details {
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      padding: 0 12px;
+      margin-top: 11px;
+      background: #fff;
+    }
+    .live-route-details summary {
+      cursor: pointer;
+      padding: 12px 0;
+      color: #173b57;
+      font-size: 13px;
+      font-weight: 750;
+    }
+    .live-route-scroll {
+      max-height: 280px;
+      overflow: auto;
+      padding-bottom: 8px;
+    }
+    @media(max-width: 700px) {
+      .live-status-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; }
+      .live-status-card { padding: 10px; }
+      .live-status-train-title { font-size: 19px; }
+    }
+  `;
+  document.head.appendChild(style);
+})();
+
+function rdLiveNormalizeKey(key) {
+  return String(key).replace(/([a-z0-9])([A-Z])/g, "$1_$2")
+    .toLowerCase().replace(/[^a-z0-9]/g, "");
+}
+
+function rdLiveFind(obj, aliases, depth = 0) {
+  if (!obj || typeof obj !== "object" || depth > 6) return undefined;
+
+  const entries = Array.isArray(obj)
+    ? []
+    : Object.entries(obj);
+
+  for (const alias of aliases) {
+    const wanted = rdLiveNormalizeKey(alias);
+    const found = entries.find(([key, value]) =>
+      rdLiveNormalizeKey(key) === wanted &&
+      value !== null && value !== undefined && value !== ""
+    );
+    if (found) return found[1];
+  }
+
+  const children = Array.isArray(obj) ? obj : entries.map(entry => entry[1]);
+  for (const value of children) {
+    if (value && typeof value === "object") {
+      const found = rdLiveFind(value, aliases, depth + 1);
+      if (found !== undefined) return found;
+    }
+  }
+  return undefined;
+}
+
+function rdLiveText(value, depth = 0) {
+  if (value === null || value === undefined || value === "") return "";
+  if (typeof value !== "object") return String(value);
+  if (depth > 3) return "";
+
+  const preferred = [
+    "stationName", "station_name", "trainName", "train_name",
+    "name", "label", "stationCode", "station_code", "code",
+    "title", "text", "value", "minutes", "speed"
+  ];
+
+  if (!Array.isArray(value)) {
+    for (const key of preferred) {
+      const found = Object.entries(value).find(([k, v]) =>
+        rdLiveNormalizeKey(k) === rdLiveNormalizeKey(key) &&
+        v !== null && v !== undefined &&
+        typeof v !== "object" && String(v).trim() !== ""
+      );
+      if (found) return String(found[1]);
+    }
+    for (const child of Object.values(value)) {
+      if (child && typeof child === "object") {
+        const text = rdLiveText(child, depth + 1);
+        if (text) return text;
+      }
+    }
+  }
+  return Array.isArray(value) ? "" : "";
+}
+
+function rdLiveField(obj, aliases) {
+  return rdLiveText(rdLiveFind(obj, aliases));
+}
+
+function renderCompactLiveStatus(data, payload, panel) {
+  panel.classList.add("live-result-panel");
+
+  const trainContainer = rdLiveFind(payload, [
+    "trainDetails", "train_details", "trainInfo", "train_info"
+  ]);
+
+  const searchInput = document.getElementById("searchInput");
+  const enteredNumber = searchInput ? searchInput.value.trim() : "";
+
+  const number = rdLiveField(payload, [
+    "trainNumber", "train_number", "trainNo", "train_no"
+  ]) || enteredNumber;
+
+  const name = (
+    rdLiveField(payload, ["trainName", "train_name", "trainTitle", "train_title"]) ||
+    rdLiveField(trainContainer, ["trainName", "train_name", "name", "title"]) ||
+    (number ? `Train ${number}` : "Live Train Status")
+  );
+
+  const current = rdLiveField(payload, [
+    "currentLocation", "current_location", "currentStation",
+    "current_station", "currentPosition", "current_position",
+    "currentStop", "current_stop", "presentStation", "present_station"
+  ]) || "Not available";
+
+  const next = rdLiveField(payload, [
+    "nextStation", "next_station", "nextHalt", "next_halt",
+    "nextStop", "next_stop", "upcomingStation", "upcoming_station"
+  ]) || "Not available";
+
+  let delay = rdLiveField(payload, [
+    "delayMinutes", "delay_minutes", "lateBy", "late_by",
+    "currentDelay", "current_delay", "delay"
+  ]);
+
+  if (delay && /^-?\d+(\.\d+)?$/.test(delay)) {
+    const minutes = Number(delay);
+    delay = minutes > 0 ? `${minutes} min late`
+      : minutes < 0 ? `${Math.abs(minutes)} min early`
+      : "On time";
+  } else if (!delay) {
+    delay = "Not available";
+  }
+
+  let speed = rdLiveField(payload, [
+    "speedKmh", "speed_kmh", "currentSpeed", "current_speed", "speed"
+  ]) || "Not available";
+
+  if (speed !== "Not available" && /^\d+(\.\d+)?$/.test(speed)) {
+    speed += " km/h";
+  }
+
+  const source = rdLiveField(payload, [
+    "sourceStation", "source_station", "source", "origin"
+  ]);
+  const destination = rdLiveField(payload, [
+    "destinationStation", "destination_station", "destination", "dest"
+  ]);
+
+  let status = rdLiveField(payload, [
+    "runningStatus", "running_status", "trainStatus", "train_status", "status"
+  ]) || "Status unavailable";
+  status = status.replace(/[_-]+/g, " ").replace(/\s+/g, " ").trim();
+
+  const low = status.toLowerCase();
+  const tone = /cancel|suspend/.test(low) ? "bad"
+    : /delay|late|divert/.test(low) || /late/.test(delay.toLowerCase()) ? "warn"
+    : /running|on time|ontime|arrived|departed/.test(low) ? "good" : "";
+
+  const heading = panel.querySelector("h4");
+  if (heading) {
+    heading.textContent = name;
+    heading.classList.add("live-status-train-title");
+  }
+
+  const head = document.createElement("div");
+  head.className = "live-status-head";
+
+  const parts = [];
+  if (number) parts.push(`Train No. ${number}`);
+  if (source && destination) parts.push(`${source} → ${destination}`);
+  if (parts.length) addText(head, "span", parts.join(" · "), "live-status-subtitle");
+
+  addText(head, "span", status, `live-status-badge ${tone}`);
+  panel.appendChild(head);
+
+  const grid = document.createElement("div");
+  grid.className = "live-status-grid";
+
+  [
+    ["Current location", current],
+    ["Delay", delay],
+    ["Next station", next],
+    ["Current speed", speed]
+  ].forEach(([label, value]) => {
+    const card = document.createElement("div");
+    card.className = "live-status-card";
+    addText(card, "span", label, "live-status-label");
+    addText(card, "strong", value, "live-status-value");
+    grid.appendChild(card);
+  });
+
+  panel.appendChild(grid);
+
+  const updated = rdLiveField(payload, [
+    "lastUpdatedAt", "last_updated_at", "updatedAt", "updated_at"
+  ]);
+  if (updated) {
+    addText(panel, "p", `Last updated: ${updated}`, "live-status-note");
+  }
+
+  const route = rdLiveFind(payload, [
+    "route", "stops", "runningStations", "running_stations",
+    "routeStations", "route_stations", "stationList", "station_list"
+  ]);
+
+  if (Array.isArray(route) && route.length) {
+    const details = document.createElement("details");
+    details.className = "live-route-details";
+    addText(details, "summary", `View full route and timings · ${route.length} stops`);
+
+    const scroll = document.createElement("div");
+    scroll.className = "live-route-scroll";
+    renderObject(route, scroll, 0);
+    details.appendChild(scroll);
+    panel.appendChild(details);
+  }
+
+  const alerts = rdLiveFind(payload, [
+    "alert", "alerts", "disruption", "disruptions", "cancellationMessage"
+  ]);
+  const alertText = rdLiveText(alerts);
+  if (alertText) {
+    const alert = document.createElement("p");
+    alert.className = "live-status-note";
+    alert.textContent = `Service information: ${alertText}`;
+    panel.appendChild(alert);
+  }
+}
+
 function renderResult(data) {
   result.replaceChildren();
 
@@ -208,8 +515,14 @@ function renderResult(data) {
 
   const payload = data && data.data !== undefined ? data.data : data;
 
-  addText(panel, "p", "Response received from the railway data service.", "result-success");
-  renderObject(payload, panel);
+
+  if (currentMode === "live") {
+    renderCompactLiveStatus(data, payload, panel);
+  } else {
+    addText(panel, "p", "Response received from the railway data service.", "result-success");
+    renderObject(payload, panel);
+  }
+
 
   const details = document.createElement("details");
   details.className = "result-details";
