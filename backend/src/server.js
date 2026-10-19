@@ -226,12 +226,151 @@ app.get("/api/news", async (req, res) => {
       throw new Error("No releases found on PIB ministry page");
     }
 
+
+    // RAIL DARPAN NEWS ARTICLE ENRICHMENT V1
+    // Read article metadata individually; one failed article should not break the feed.
+    const enrichedItems = await Promise.all(items.map(async (item) => {
+      try {
+        const articleResponse = await fetch(item.link, {
+          headers: {
+            Accept: "text/html,application/xhtml+xml",
+            "User-Agent": "Mozilla/5.0 RailDarpan/1.0"
+          },
+          signal: AbortSignal.timeout(8000)
+        });
+
+        if (!articleResponse.ok) {
+          return { ...item, image: "", description: item.description || "" };
+        }
+
+        const articleHtml = await articleResponse.text();
+        const metaTags = articleHtml.match(/<meta\b[^>]*>/gi) || [];
+
+        function readAttribute(tag, name) {
+          const escapedName = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+          const match = tag.match(new RegExp(
+            "\\b" + escapedName + "\\s*=\\s*(?:\"([^\"]*)\"|'([^']*)'|([^\\s>]+))",
+            "i"
+          ));
+          return match ? (match[1] || match[2] || match[3] || "").trim() : "";
+        }
+
+        function readMeta(keys) {
+          for (const key of keys) {
+            for (const tag of metaTags) {
+              const identity = (
+                readAttribute(tag, "property") ||
+                readAttribute(tag, "name") ||
+                readAttribute(tag, "itemprop")
+              ).toLowerCase();
+
+              const content = readAttribute(tag, "content");
+              if (identity === key && content) return cleanText(content);
+            }
+          }
+          return "";
+        }
+
+        // RAIL DARPAN NEWS PIB IFRAME IMAGE SOURCE V1
+        let imageHtml = articleHtml;
+        let imageBaseUrl = item.link;
+
+        try {
+          const sourceLink = new URL(item.link);
+          const prid = sourceLink.searchParams.get("PRID");
+
+          if (prid) {
+            const iframeUrl = new URL(
+              "https://www.pib.gov.in/PressReleaseIframePage.aspx"
+            );
+            iframeUrl.searchParams.set("PRID", prid);
+            iframeUrl.searchParams.set("lang", "1");
+
+            const imagePageResponse = await fetch(iframeUrl.href, {
+              headers: {
+                Accept: "text/html,application/xhtml+xml",
+                "User-Agent": "Mozilla/5.0 RailDarpan/1.0"
+              },
+              signal: AbortSignal.timeout(8000)
+            });
+
+            if (imagePageResponse.ok) {
+              imageHtml = await imagePageResponse.text();
+              imageBaseUrl = iframeUrl.href;
+            }
+          }
+        } catch (imageError) {
+          console.warn(
+            "PIB article image lookup skipped:",
+            item.link,
+            imageError.message
+          );
+        }
+
+        let image = "";
+        const imageTags = imageHtml.match(/<img\b[^>]*>/gi) || [];
+
+        for (const tag of imageTags) {
+          const src =
+            readAttribute(tag, "src") ||
+            readAttribute(tag, "data-src") ||
+            readAttribute(tag, "data-original");
+
+          const alt = readAttribute(tag, "alt");
+          if (!src) continue;
+
+          if (
+            /language-icon|hindi\.png|english\.png|logo|banner|g20|azadi|emblem|captcha|flag|relatedlink|mygov/i
+              .test(src + " " + alt)
+          ) continue;
+
+          if (/\.(svg|gif)(?:[?#]|$)/i.test(src)) continue;
+
+          const width = Number(readAttribute(tag, "width"));
+          if (width && width < 220) continue;
+
+          try {
+            const candidate = new URL(src, imageBaseUrl);
+
+            if (
+              candidate.protocol !== "https:" &&
+              candidate.protocol !== "http:"
+            ) continue;
+
+            if (candidate.hostname.toLowerCase() !== "static.pib.gov.in") {
+              continue;
+            }
+
+            // Use press-release content images, not PIB page furniture.
+            if (
+              !/\/WriteReadData\/userfiles\/image\//i.test(candidate.pathname)
+            ) continue;
+
+            image = candidate.href;
+            break;
+          } catch (_) {}
+        }
+
+        const description =
+          readMeta(["og:description", "description", "twitter:description"]) ||
+          item.description ||
+          "";
+
+        if (image && /ph20221121131401\.png/i.test(image)) image = "";
+
+        return { ...item, image, description };
+      } catch (error) {
+        console.warn("News article enrichment skipped:", item.link, error.message);
+        return { ...item, image: "", description: item.description || "" };
+      }
+    }));
+
     res.json({
       success: true,
       source: "Press Information Bureau — Ministry of Railways",
       sourceUrl: filteredUrl,
-      count: items.length,
-      items
+      count: enrichedItems.length,
+      items: enrichedItems
     });
   } catch (error) {
     console.error("Railway news error:", error.message);

@@ -3342,7 +3342,7 @@ stationLiveForm.addEventListener("submit", async event => {
 });
 
 
-async function loadRailwayNews() {
+async function loadRailwayNews({ silent = false } = {}) {
   const section = document.getElementById("railway-news");
   if (!section) return;
 
@@ -3355,32 +3355,79 @@ async function loadRailwayNews() {
     section.appendChild(container);
   }
 
-  container.replaceChildren();
+  let status = document.getElementById("railwayNewsRefreshStatus");
+  if (!status) {
+    status = document.createElement("p");
+    status.id = "railwayNewsRefreshStatus";
+    status.className = "result-label";
+    section.insertBefore(status, container);
+  }
 
-  const loading = document.createElement("p");
-  loading.textContent = "Loading official railway news…";
-  container.appendChild(loading);
+  if (loadRailwayNews.inFlight) return;
+  loadRailwayNews.inFlight = true;
+
+  const hadExistingCards = Boolean(
+    container.querySelector("article.service-card")
+  );
+
+  if (!hadExistingCards) {
+    container.replaceChildren();
+    const loading = document.createElement("p");
+    loading.textContent = "Loading official railway news…";
+    container.appendChild(loading);
+    status.textContent = "Checking official news updates…";
+  } else if (!silent) {
+    status.textContent = "Checking for the latest official news…";
+  }
 
   try {
-    const response = await fetch("/api/news");
+    const response = await fetch("/api/news?_=" + Date.now(), {
+      cache: "no-store",
+      headers: { Accept: "application/json" }
+    });
+
     const result = await response.json();
 
     if (!response.ok || !result.success) {
       throw new Error(result.error || "News unavailable");
     }
 
-    container.replaceChildren();
+    const items = Array.isArray(result.items) ? result.items : [];
 
-    if (!result.items || result.items.length === 0) {
-      const empty = document.createElement("p");
-      empty.textContent = "No news items are available right now.";
-      container.appendChild(empty);
+    if (items.length === 0) {
+      if (!hadExistingCards) {
+        const empty = document.createElement("p");
+        empty.textContent = "No news items are available right now.";
+        container.replaceChildren(empty);
+      }
+      status.textContent =
+        "No new news items were returned. The next automatic check will retry.";
       return;
     }
 
-    result.items.forEach((news) => {
+    const fragment = document.createDocumentFragment();
+
+    items.forEach((news) => {
       const card = document.createElement("article");
       card.className = "service-card";
+
+      if (
+        news.image &&
+        /^https?:\/\//i.test(news.image) &&
+        !/ph20221121131401\.png|\/images\/(?:hindi|english)\.png/i.test(news.image)
+      ) {
+        const image = document.createElement("img");
+        image.className = "railway-news-image";
+        image.src = news.image;
+        image.alt = news.title || "Official railway news";
+        image.loading = "lazy";
+        image.decoding = "async";
+        image.style.cssText =
+          "display:block;width:100%;aspect-ratio:16/9;object-fit:cover;" +
+          "border-radius:12px;margin:0 0 14px;background:#eef2f7;";
+        image.addEventListener("error", () => image.remove(), { once: true });
+        card.appendChild(image);
+      }
 
       const title = document.createElement("h4");
       title.textContent = news.title || "Railway update";
@@ -3389,7 +3436,6 @@ async function loadRailwayNews() {
       if (news.date) {
         const date = document.createElement("p");
         date.className = "result-label";
-
         const parsedDate = new Date(news.date);
         date.textContent = Number.isNaN(parsedDate.getTime())
           ? news.date
@@ -3397,7 +3443,6 @@ async function loadRailwayNews() {
               dateStyle: "medium",
               timeStyle: "short"
             });
-
         card.appendChild(date);
       }
 
@@ -3407,26 +3452,66 @@ async function loadRailwayNews() {
         card.appendChild(description);
       }
 
-      const link = document.createElement("a");
-      link.href = news.link;
-      link.target = "_blank";
-      link.rel = "noopener noreferrer";
-      link.textContent = "Read official update →";
-      card.appendChild(link);
+      if (news.link && /^https:\/\/www\.pib\.gov\.in\//i.test(news.link)) {
+        const link = document.createElement("a");
+        link.href = news.link;
+        link.target = "_blank";
+        link.rel = "noopener noreferrer";
+        link.textContent = "Read official update →";
+        card.appendChild(link);
+      }
 
-      container.appendChild(card);
+      fragment.appendChild(card);
     });
+
+    container.replaceChildren(fragment);
+    loadRailwayNews.lastSuccessAt = Date.now();
+
+    status.textContent =
+      "Official railway news · Last checked " +
+      new Date().toLocaleTimeString("en-IN", {
+        hour: "2-digit",
+        minute: "2-digit"
+      }) +
+      " · Automatic updates every 10 minutes";
   } catch (error) {
-    container.replaceChildren();
-
-    const message = document.createElement("p");
-    message.textContent =
-      "Official news is temporarily unavailable. Please try again later.";
-    message.className = "result-error";
-    container.appendChild(message);
-
     console.error("Railway news loading failed:", error);
+
+    if (!hadExistingCards) {
+      const message = document.createElement("p");
+      message.textContent =
+        "Official news is temporarily unavailable. The site will retry automatically.";
+      message.className = "result-error";
+      container.replaceChildren(message);
+    } else {
+      status.textContent =
+        "Could not refresh news just now. Showing the last loaded updates; automatic retry is enabled.";
+    }
+  } finally {
+    loadRailwayNews.inFlight = false;
   }
 }
 
 loadRailwayNews();
+
+// RAIL DARPAN AUTO NEWS REFRESH V1
+// Poll only while the page is open and visible.
+if (!window.__railDarpanNewsAutoRefreshTimer) {
+  window.__railDarpanNewsAutoRefreshTimer = window.setInterval(() => {
+    if (!document.hidden) loadRailwayNews({ silent: true });
+  }, 10 * 60 * 1000);
+}
+
+if (!window.__railDarpanNewsVisibilityBound) {
+  window.__railDarpanNewsVisibilityBound = true;
+
+  document.addEventListener("visibilitychange", () => {
+    const lastSuccess = loadRailwayNews.lastSuccessAt || 0;
+    if (
+      !document.hidden &&
+      Date.now() - lastSuccess >= 10 * 60 * 1000
+    ) {
+      loadRailwayNews({ silent: true });
+    }
+  });
+}
