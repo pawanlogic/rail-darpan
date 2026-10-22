@@ -2127,6 +2127,178 @@ function renderCompactLiveStatus(data, payload, panel) {
     document.head.appendChild(style);
   }
 
+
+  /* RAIL DARPAN LIVE HALT TIMELINE V1 */
+  if (!document.getElementById("rd-live-route-timeline-style")) {
+    const style = document.createElement("style");
+    style.id = "rd-live-route-timeline-style";
+    style.textContent = `
+      .live-v3-route-timeline {
+        overflow: hidden;
+        border: 1px solid #c7d2fe;
+        background: linear-gradient(135deg,#ffffff,#f5f3ff 55%,#ecfeff);
+      }
+      .live-v3-route-help {
+        margin: 0 0 8px;
+        color: #64748b;
+        font-size: 11px;
+        line-height: 1.55;
+      }
+      .live-v3-route-viewport {
+        width: 100%;
+        overflow-x: auto;
+        overflow-y: hidden;
+        padding: 12px 4px 16px;
+        overscroll-behavior-x: contain;
+        scrollbar-width: thin;
+        scrollbar-color: #818cf8 #e0e7ff;
+      }
+      .live-v3-route-track {
+        display: flex;
+        align-items: flex-start;
+        width: max-content;
+        min-width: 100%;
+      }
+      .live-v3-route-stop {
+        box-sizing: border-box;
+        flex: 0 0 70px;
+        width: 70px;
+        min-width: 0;
+        padding: 5px 3px 7px;
+        border: 1px solid transparent;
+        border-radius: 13px;
+        text-align: center;
+        scroll-snap-align: center;
+      }
+      .live-v3-route-stop.is-current {
+        border-color: #86efac;
+        background: linear-gradient(155deg,#f0fdf4,#dcfce7);
+        box-shadow: 0 5px 18px rgba(34,197,94,.15);
+      }
+      .live-v3-route-marker {
+        box-sizing: border-box;
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        height: 30px;
+        margin-bottom: 5px;
+      }
+      .live-v3-route-station-dot {
+        width: 13px;
+        height: 13px;
+        flex: 0 0 13px;
+        border: 3px solid #6366f1;
+        border-radius: 50%;
+        background: #fff;
+        box-shadow: 0 0 0 5px #e0e7ff;
+      }
+      .live-v3-route-current-icon {
+        font-size: 22px;
+        line-height: 1;
+        filter: drop-shadow(0 3px 3px rgba(15,23,42,.2));
+      }
+      .live-v3-route-live-pill {
+        position: absolute;
+        top: -5px;
+        right: -2px;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 3px 5px;
+        border: 1px solid #86efac;
+        border-radius: 999px;
+        background: #dcfce7;
+        color: #166534;
+        font-size: 9px;
+        font-weight: 900;
+        letter-spacing: .3px;
+      }
+      .live-v3-route-live-dot {
+        position: absolute;
+        top: 0;
+        left: calc(50% + 4px);
+        z-index: 3;
+        box-sizing: border-box;
+        width: 9px;
+        height: 9px;
+        border: 2px solid #ffffff;
+        border-radius: 50%;
+        background: #16a34a;
+        box-shadow: 0 0 0 0 rgba(22,163,74,.65);
+        animation: rd-live-halt-pulse 1.35s infinite;
+      }
+      @keyframes rd-live-halt-pulse {
+        0% { box-shadow: 0 0 0 0 rgba(22,163,74,.65); }
+        70% { box-shadow: 0 0 0 7px rgba(22,163,74,0); }
+        100% { box-shadow: 0 0 0 0 rgba(22,163,74,0); }
+      }
+      .live-v3-route-stop-name {
+        color: #1e1b4b;
+        font-size: 10px;
+        font-weight: 800;
+        line-height: 1.35;
+        overflow-wrap: anywhere;
+      }
+      .live-v3-route-stop.is-current .live-v3-route-stop-name {
+        color: #166534;
+      }
+      .live-v3-route-stop-code {
+        margin-top: 4px;
+        color: #64748b;
+        font-size: 10px;
+        font-weight: 700;
+      }
+      .live-v3-route-current-label {
+        display: inline-block;
+        margin-top: 6px;
+        padding: 3px 7px;
+        border-radius: 999px;
+        background: #bbf7d0;
+        color: #166534;
+        font-size: 9px;
+        font-weight: 900;
+      }
+      .live-v3-route-connector {
+        box-sizing: border-box;
+        position: relative;
+        flex: 0 0 8px;
+        width: 8px;
+        height: 12px;
+        margin-top: 17px;
+        background: repeating-linear-gradient(
+          90deg, transparent 0 8px, #94a3b8 8px 11px, transparent 11px 17px
+        );
+      }
+      .live-v3-route-connector::before,
+      .live-v3-route-connector::after {
+        content: "";
+        position: absolute;
+        left: 0;
+        right: 0;
+        height: 2px;
+        border-radius: 2px;
+        background: #64748b;
+      }
+      .live-v3-route-connector::before { top: 2px; }
+      .live-v3-route-connector::after { top: 8px; }
+      @media(max-width:600px) {
+        .live-v3-route-stop {
+          flex-basis: 64px;
+          width: 64px;
+        }
+        .live-v3-route-connector {
+          flex-basis: 6px;
+          width: 6px;
+        }
+      }
+      @media(prefers-reduced-motion:reduce) {
+        .live-v3-route-live-dot { animation: none; }
+      }
+    `;
+    document.head.appendChild(style);
+  }
+
   panel.classList.add("live-result-panel");
 
   const inputEl = document.getElementById("searchInput");
@@ -2267,6 +2439,115 @@ function renderCompactLiveStatus(data, payload, panel) {
   });
 
   panel.appendChild(grid);
+
+
+  /* Build a route strip using halting stations only. */
+  let routeTimeline = null;
+
+  const haltStations = route
+    .map((stop, index) => ({
+      stop,
+      index,
+      name: rdLiveV3StopName(stop)
+    }))
+    .filter(item =>
+      rdScheduleV2IsHalt(item.stop, item.index, route.length) &&
+      item.name &&
+      !/^not available$/i.test(String(item.name))
+    );
+
+  if (haltStations.length) {
+    routeTimeline = document.createElement("section");
+    routeTimeline.className = "live-v3-section live-v3-route-timeline";
+
+    addText(
+      routeTimeline,
+      "h5",
+      "Train route · stopping stations",
+      "live-v3-section-title"
+    );
+
+    addText(
+      routeTimeline,
+      "p",
+      "Only halting stations are shown. The green LIVE marker appears only when the provider's current station matches a listed halt.",
+      "live-v3-route-help"
+    );
+
+    const viewport = document.createElement("div");
+    viewport.className = "live-v3-route-viewport";
+    viewport.setAttribute("aria-label", "Scrollable train route");
+
+    const track = document.createElement("div");
+    track.className = "live-v3-route-track";
+
+    haltStations.forEach((item, visibleIndex) => {
+      if (visibleIndex > 0) {
+        const connector = document.createElement("div");
+        connector.className = "live-v3-route-connector";
+        connector.setAttribute("aria-hidden", "true");
+        track.appendChild(connector);
+      }
+
+      const isCurrent = currentIndex >= 0 && item.index === currentIndex;
+
+      const stopCard = document.createElement("div");
+      stopCard.className = "live-v3-route-stop" + (isCurrent ? " is-current" : "");
+
+      const markerRow = document.createElement("div");
+      markerRow.className = "live-v3-route-marker";
+
+      if (isCurrent) {
+        const trainIcon = document.createElement("span");
+        trainIcon.className = "live-v3-route-current-icon";
+        trainIcon.textContent = "🚆";
+        trainIcon.setAttribute("role", "img");
+        trainIcon.setAttribute("aria-label", "Train currently reported at this station");
+        markerRow.appendChild(trainIcon);
+
+        // RAIL DARPAN LIVE ICON ONLY V2
+        const liveDot = document.createElement("span");
+        liveDot.className = "live-v3-route-live-dot";
+        liveDot.setAttribute("aria-hidden", "true");
+        markerRow.appendChild(liveDot);
+      } else {
+        const stationDot = document.createElement("span");
+        stationDot.className = "live-v3-route-station-dot";
+        stationDot.setAttribute("aria-hidden", "true");
+        markerRow.appendChild(stationDot);
+      }
+
+      stopCard.appendChild(markerRow);
+      addText(stopCard, "div", String(item.name), "live-v3-route-stop-name");
+
+      const code = rdLiveV3Value(item.stop, [
+        "stationCode", "station_code", "code", "stationId", "station_id"
+      ]);
+
+      if (code && String(code).toLowerCase() !== String(item.name).toLowerCase()) {
+        addText(stopCard, "div", String(code), "live-v3-route-stop-code");
+      }
+
+
+      track.appendChild(stopCard);
+    });
+
+    viewport.appendChild(track);
+    routeTimeline.appendChild(viewport);
+
+    const currentIsShown = haltStations.some(item => item.index === currentIndex);
+
+    if (!currentIsShown) {
+      addText(
+        routeTimeline,
+        "p",
+        "Current station could not be matched to a scheduled halt. No station is marked LIVE.",
+        "live-v3-note"
+      );
+    }
+
+    panel.appendChild(routeTimeline);
+  }
 
   const routeStart = nextIndex >= 0
     ? nextIndex
@@ -2430,8 +2711,12 @@ list.appendChild(badge);
     );
 
     /* RAIL DARPA​N COACH POSITION PLACEMENT V2 */
+    const routeTimeline = panel.querySelector(".live-v3-route-timeline");
     const summaryGrid = panel.querySelector(".live-v3-grid");
-    if (summaryGrid) {
+
+    if (routeTimeline) {
+      routeTimeline.insertAdjacentElement("afterend", section);
+    } else if (summaryGrid) {
       summaryGrid.insertAdjacentElement("afterend", section);
     } else {
       panel.appendChild(section);
@@ -3292,6 +3577,246 @@ stationSearchForm.addEventListener("submit", async event => {
   }
 });
 
+
+function renderStationFriendlyV2(payload, panel) {
+  const isObj = value =>
+    value !== null && typeof value === "object" && !Array.isArray(value);
+
+  const pick = (obj, keys) => {
+    for (const key of keys) {
+      if (obj && obj[key] !== undefined &&
+          obj[key] !== null && obj[key] !== "") return obj[key];
+    }
+    return undefined;
+  };
+
+  const hasAny = (obj, keys) =>
+    isObj(obj) && keys.some(key => obj[key] !== undefined);
+
+  const isTrain = obj =>
+    isObj(obj) &&
+    pick(obj, ["number", "trainNumber", "trainNo", "train_number"]) !== undefined &&
+    pick(obj, ["name", "trainName", "train_name"]) !== undefined;
+
+  function findRows(value, depth = 0) {
+    if (depth > 8) return null;
+
+    if (Array.isArray(value)) {
+      const tupleRows = value.filter(
+        row => Array.isArray(row) && row.some(isTrain)
+      );
+
+      if (tupleRows.length &&
+          tupleRows.length >= Math.ceil(value.length / 2)) {
+        return { rows: tupleRows, tuples: true };
+      }
+
+      const trains = value.filter(isTrain);
+      if (trains.length) return { rows: trains, tuples: false };
+
+      for (const child of value) {
+        const found = findRows(child, depth + 1);
+        if (found) return found;
+      }
+    } else if (isObj(value)) {
+      // Station API rows contain nested train, stop and live objects.
+      for (const key of ["trains", "trainList", "trainDetails", "results"]) {
+        const rows = value[key];
+        if (Array.isArray(rows) && rows.some(row =>
+          isTrain(row) ||
+          (isObj(row) && Object.values(row).some(isTrain)) ||
+          (Array.isArray(row) && row.some(isTrain))
+        )) {
+          return { rows, tuples: false };
+        }
+      }
+
+      if (isTrain(value)) return { rows: [value], tuples: false };
+
+      for (const child of Object.values(value)) {
+        const found = findRows(child, depth + 1);
+        if (found) return found;
+      }
+    }
+    return null;
+  }
+
+  function timeText(value) {
+    if (value === undefined || value === null || value === "") return "—";
+    const text = String(value);
+    const isoTime = text.match(/T(\d{2}:\d{2})/);
+    if (isoTime) return isoTime[1];
+    const clock = text.match(/\b\d{1,2}:\d{2}\b/);
+    return clock ? clock[0] : text;
+  }
+
+  function titleCase(value) {
+    return String(value || "")
+      .replace(/[-_]+/g, " ")
+      .replace(/\b\w/g, letter => letter.toUpperCase());
+  }
+
+  function addMetric(grid, label, value) {
+    const item = document.createElement("div");
+    item.className = "station-train-metric";
+    const labelNode = document.createElement("span");
+    labelNode.className = "station-metric-label";
+    labelNode.textContent = label;
+    item.appendChild(labelNode);
+
+    const valueNode = document.createElement("strong");
+    valueNode.className = "station-metric-value";
+    valueNode.textContent = String(value ?? "—");
+    item.appendChild(valueNode);
+    grid.appendChild(item);
+  }
+
+  const found = findRows(payload);
+
+  if (found && found.rows.length) {
+    addText(
+      panel,
+      "p",
+      `${found.rows.length} train(s) returned by the railway data provider.`,
+      "station-train-count"
+    );
+
+    const grid = document.createElement("div");
+    grid.className = "station-trains-grid";
+
+    found.rows.forEach((row, index) => {
+      const pieces = Array.isArray(row)
+        ? row.filter(isObj)
+        : [row, ...Object.values(row).filter(isObj)];
+
+      const train = pieces.find(isTrain) || {};
+      const timing = pieces.find(obj =>
+        hasAny(obj, ["arrival", "departure", "platform", "sequence", "distance"])
+      ) || {};
+      const live = pieces.find(obj =>
+        hasAny(obj, [
+          "expectedArrivalTime", "expectedDepartureTime",
+          "delayMinutes", "liveStatus"
+        ]) || (obj.type && obj !== train && obj !== timing)
+      ) || {};
+
+      const number = pick(train, [
+        "number", "trainNumber", "trainNo", "train_number"
+      ]) || "N/A";
+      const name = pick(train, [
+        "name", "trainName", "train_name"
+      ]) || `Train ${number}`;
+      const type = pick(train, ["type", "trainType", "category"]) || "Train";
+      const from = pick(train, ["source", "from", "origin", "sourceCode"]) || "—";
+      const to = pick(train, [
+        "destination", "to", "destinationCode", "dest"
+      ]) || "—";
+
+      const arrival = timeText(
+        pick(timing, ["arrival", "arrivalTime", "scheduledArrival"]) ??
+        pick(live, ["expectedArrivalTime"])
+      );
+      const departure = timeText(
+        pick(timing, ["departure", "departureTime", "scheduledDeparture"]) ??
+        pick(live, ["expectedDepartureTime"])
+      );
+      const platform = pick(timing, ["platform", "platformNumber"]) || "—";
+
+      const rawStatus = pick(live, ["type", "status", "liveStatus", "state"]);
+      const state = rawStatus
+        ? titleCase(rawStatus)
+        : (timing.isHalt === false ? "Pass-through" : "Scheduled stop");
+
+      const delay = pick(live, ["delayMinutes", "delay_min"]);
+      let delayText = "—";
+      if (delay !== undefined && Number.isFinite(Number(delay))) {
+        const minutes = Number(delay);
+        delayText = minutes === 0
+          ? "On time"
+          : minutes > 0
+            ? `${minutes} min late`
+            : `${Math.abs(minutes)} min early`;
+      } else if (delay !== undefined) {
+        delayText = String(delay);
+      }
+
+      const card = document.createElement("article");
+      card.className = "station-train-card";
+
+      const top = document.createElement("div");
+      top.className = "station-train-card-top";
+      addText(top, "span", `Train ${number}`, "station-train-number");
+      addText(top, "span", state, "station-train-status");
+      card.appendChild(top);
+
+      addText(card, "h4", String(name), "station-train-name");
+      addText(card, "p", String(type), "station-train-type");
+      addText(card, "p", `${from}  →  ${to}`, "station-train-route");
+
+      const runDays = pick(train, [
+        "runDays", "runningDays", "daysOfRun", "runsOn", "days"
+      ]);
+
+      if (Array.isArray(runDays) && runDays.length) {
+        const dayNames = {
+          mon: "Monday", monday: "Monday",
+          tue: "Tuesday", tues: "Tuesday", tuesday: "Tuesday",
+          wed: "Wednesday", wednesday: "Wednesday",
+          thu: "Thursday", thur: "Thursday", thurs: "Thursday",
+          thursday: "Thursday",
+          fri: "Friday", friday: "Friday",
+          sat: "Saturday", saturday: "Saturday",
+          sun: "Sunday", sunday: "Sunday"
+        };
+
+        const daysWrap = document.createElement("div");
+        daysWrap.className = "station-train-days";
+        addText(daysWrap, "span", "Runs on", "station-days-label");
+
+        const daysList = document.createElement("div");
+        daysList.className = "station-days-list";
+
+        const normalizedDays = Array.from(new Set(
+          runDays.map(day => {
+            const key = String(day ?? "").trim().toLowerCase();
+            return dayNames[key] || (key ? titleCase(key) : "");
+          }).filter(Boolean)
+        ));
+
+        normalizedDays.forEach(day =>
+          addText(daysList, "span", day, "station-day-chip")
+        );
+
+        if (normalizedDays.length) {
+          daysWrap.appendChild(daysList);
+          card.appendChild(daysWrap);
+        }
+      }
+
+      const metrics = document.createElement("div");
+      metrics.className = "station-train-metrics";
+      addMetric(metrics, "Arrival", arrival);
+      addMetric(metrics, "Departure", departure);
+      addMetric(metrics, "Platform", platform);
+      addMetric(metrics, "Delay", delayText);
+      card.appendChild(metrics);
+
+      grid.appendChild(card);
+    });
+
+    panel.appendChild(grid);
+  } else {
+    addText(
+      panel,
+      "p",
+      "The provider response could not be identified as a train list. Open the technical details below.",
+      "result-success"
+    );
+  }
+
+
+}
+
 stationLiveForm.addEventListener("submit", async event => {
   event.preventDefault();
 
@@ -3333,7 +3858,7 @@ stationLiveForm.addEventListener("submit", async event => {
     );
 
     const payload = data.data !== undefined ? data.data : data;
-    renderObject(payload, panel);
+    renderStationFriendlyV2(payload, panel);
 
     stationLiveResults.appendChild(panel);
   } catch (error) {

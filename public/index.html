@@ -372,6 +372,1508 @@
   }
 }
 
+
+/* Compact Station Explorer */
+#stationResults {
+  max-height: 320px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+
+
+
+
+/* RAIL DARPAN STATION CARDS V2 */
+#stationLiveResults .station-train-count {
+  margin: 10px 0;
+  color: var(--muted, #6b7280);
+  font-size: 13px;
+}
+#stationLiveResults .station-trains-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(245px, 1fr));
+  gap: 12px;
+  margin: 12px 0 16px;
+}
+#stationLiveResults .station-train-card {
+  min-width: 0;
+  padding: 14px;
+  border: 1px solid var(--border, #d1d5db);
+  border-radius: 12px;
+  background: var(--surface, #fff);
+  color: var(--text, #111827);
+}
+#stationLiveResults .station-train-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+#stationLiveResults .station-train-number,
+#stationLiveResults .station-train-status {
+  font-size: 12px;
+  font-weight: 700;
+  border-radius: 20px;
+  padding: 5px 9px;
+  background: var(--soft, #eef2ff);
+}
+#stationLiveResults .station-train-name {
+  margin: 10px 0 3px;
+  font-size: 16px;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+#stationLiveResults .station-train-type {
+  margin: 0 0 8px;
+  color: var(--muted, #6b7280);
+  font-size: 12px;
+}
+#stationLiveResults .station-train-route {
+  margin: 8px 0 12px;
+  font-weight: 700;
+  letter-spacing: .3px;
+}
+#stationLiveResults .station-train-metrics {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 9px;
+}
+#stationLiveResults .station-train-metric {
+  min-width: 0;
+  padding: 9px;
+  border-radius: 8px;
+  background: var(--soft, #f3f4f6);
+}
+#stationLiveResults .station-metric-label {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--muted, #6b7280);
+  font-size: 11px;
+}
+#stationLiveResults .station-metric-value {
+  display: block;
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+
+
+/* RAIL DARPAN STATION LIST SCROLL FIX V3 */
+#stationLiveResults .station-trains-grid {
+  max-height: 560px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  align-content: start;
+  padding: 2px 6px 8px 0;
+  overscroll-behavior: contain;
+}
+@media (max-width: 560px) {
+  #stationLiveResults .station-trains-grid {
+    max-height: 480px;
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+
+/* RAIL DARPAN TRAIN RUN DAYS V1 */
+#stationLiveResults .station-train-days {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  margin: 10px 0 12px;
+}
+#stationLiveResults .station-days-label {
+  color: var(--muted, #6b7280);
+  font-size: 12px;
+  font-weight: 700;
+}
+#stationLiveResults .station-days-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+#stationLiveResults .station-day-chip {
+  display: inline-block;
+  border: 1px solid var(--border, #d1d5db);
+  border-radius: 16px;
+  padding: 4px 8px;
+  font-size: 11px;
+  line-height: 1.3;
+  background: var(--soft, #f3f4f6);
+}
+
+
+/* RAIL DARPAN STATION LIST VIEW V1 */
+#stationLiveResults .station-trains-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 560px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 3px 6px 8px 0;
+  overscroll-behavior: contain;
+}
+
+#stationLiveResults .station-train-card {
+  display: grid;
+  flex: 0 0 auto;
+  grid-template-columns:
+    minmax(160px, 1.15fr)
+    minmax(95px, 0.7fr)
+    minmax(180px, 1.15fr)
+    minmax(180px, 1.2fr);
+  grid-template-rows: auto auto auto;
+  grid-template-areas:
+    "top route metrics days"
+    "name route metrics days"
+    "type route metrics days";
+  align-items: center;
+  gap: 5px 14px;
+  padding: 12px;
+}
+
+#stationLiveResults .station-train-card-top {
+  grid-area: top;
+  min-width: 0;
+}
+
+#stationLiveResults .station-train-name {
+  grid-area: name;
+  margin: 0;
+  font-size: 15px;
+}
+
+#stationLiveResults .station-train-type {
+  grid-area: type;
+  margin: 0;
+}
+
+#stationLiveResults .station-train-route {
+  grid-area: route;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+#stationLiveResults .station-train-metrics {
+  grid-area: metrics;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  min-width: 0;
+}
+
+#stationLiveResults .station-train-days {
+  grid-area: days;
+  min-width: 0;
+  margin: 0;
+}
+
+#stationLiveResults .station-days-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+#stationLiveResults .station-day-chip {
+  padding: 4px 7px;
+  font-size: 11px;
+}
+
+@media (max-width: 850px) {
+  #stationLiveResults .station-train-card {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 0.9fr);
+    grid-template-rows: auto auto auto auto auto;
+    grid-template-areas:
+      "top route"
+      "name route"
+      "type route"
+      "metrics metrics"
+      "days days";
+    gap: 8px 12px;
+  }
+}
+
+@media (max-width: 480px) {
+  #stationLiveResults .station-train-card {
+    padding: 10px;
+  }
+
+  #stationLiveResults .station-train-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+
+/* RAIL DARPAN COLORFUL TRAIN LIST V1 */
+
+#stationLiveResults .station-train-count {
+  display: inline-block;
+  padding: 8px 13px;
+  border: 1px solid #bfdbfe;
+  border-radius: 20px;
+  background: linear-gradient(110deg, #eff6ff, #f5f3ff);
+  color: #3730a3;
+  font-weight: 700;
+}
+
+#stationLiveResults .station-train-card {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid #dbeafe;
+  border-left: 4px solid #6366f1;
+  border-radius: 14px;
+  background: linear-gradient(
+    115deg,
+    #eff6ff 0%,
+    #ffffff 52%,
+    #f5f3ff 100%
+  );
+  box-shadow: 0 4px 14px rgba(59, 84, 180, 0.09);
+  transition: transform 160ms ease, box-shadow 160ms ease,
+              border-color 160ms ease;
+}
+
+#stationLiveResults .station-train-card:hover {
+  transform: translateY(-2px);
+  border-color: #a5b4fc;
+  border-left-color: #7c3aed;
+  box-shadow: 0 8px 22px rgba(79, 70, 229, 0.16);
+}
+
+#stationLiveResults .station-train-number {
+  color: #ffffff;
+  background: linear-gradient(135deg, #2563eb, #7c3aed);
+  border: 0;
+  box-shadow: 0 2px 7px rgba(79, 70, 229, 0.2);
+}
+
+#stationLiveResults .station-train-status {
+  color: #4338ca;
+  background: linear-gradient(135deg, #ede9fe, #dbeafe);
+  border: 1px solid #c4b5fd;
+}
+
+#stationLiveResults .station-train-name {
+  color: #172554;
+  font-weight: 750;
+}
+
+#stationLiveResults .station-train-type {
+  color: #6d28d9;
+  font-weight: 600;
+}
+
+#stationLiveResults .station-train-route {
+  padding: 9px 10px;
+  border: 1px solid #a7f3d0;
+  border-radius: 10px;
+  background: linear-gradient(120deg, #dcfce7, #ecfdf5);
+  color: #047857;
+  font-size: 14px;
+  font-weight: 800;
+  text-align: center;
+}
+
+#stationLiveResults .station-train-metric {
+  border: 1px solid #e0e7ff;
+  border-radius: 9px;
+  background: #eef2ff;
+  transition: background 150ms ease;
+}
+
+#stationLiveResults .station-train-metric:nth-child(1) {
+  border-color: #bfdbfe;
+  background: linear-gradient(135deg, #eff6ff, #dbeafe);
+}
+
+#stationLiveResults .station-train-metric:nth-child(2) {
+  border-color: #fed7aa;
+  background: linear-gradient(135deg, #fff7ed, #ffedd5);
+}
+
+#stationLiveResults .station-train-metric:nth-child(3) {
+  border-color: #ddd6fe;
+  background: linear-gradient(135deg, #f5f3ff, #ede9fe);
+}
+
+#stationLiveResults .station-train-metric:nth-child(4) {
+  border-color: #fecdd3;
+  background: linear-gradient(135deg, #fff1f2, #ffe4e6);
+}
+
+#stationLiveResults .station-train-metric:nth-child(1) .station-metric-label {
+  color: #1d4ed8;
+}
+
+#stationLiveResults .station-train-metric:nth-child(2) .station-metric-label {
+  color: #c2410c;
+}
+
+#stationLiveResults .station-train-metric:nth-child(3) .station-metric-label {
+  color: #6d28d9;
+}
+
+#stationLiveResults .station-train-metric:nth-child(4) .station-metric-label {
+  color: #be123c;
+}
+
+#stationLiveResults .station-metric-value {
+  color: #1e293b;
+  font-weight: 750;
+}
+
+#stationLiveResults .station-days-label {
+  color: #6d28d9;
+  font-weight: 750;
+}
+
+#stationLiveResults .station-day-chip {
+  border: 1px solid #c4b5fd;
+  border-radius: 20px;
+  background: linear-gradient(135deg, #ede9fe, #e0e7ff);
+  color: #4338ca;
+  font-weight: 650;
+  transition: transform 150ms ease, box-shadow 150ms ease;
+}
+
+#stationLiveResults .station-day-chip:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 7px rgba(99, 102, 241, 0.18);
+}
+
+#stationLiveResults .station-trains-grid {
+  scrollbar-width: thin;
+  scrollbar-color: #a5b4fc #eef2ff;
+}
+
+#stationLiveResults .station-trains-grid::-webkit-scrollbar {
+  width: 7px;
+}
+
+#stationLiveResults .station-trains-grid::-webkit-scrollbar-track {
+  border-radius: 8px;
+  background: #eef2ff;
+}
+
+#stationLiveResults .station-trains-grid::-webkit-scrollbar-thumb {
+  border-radius: 8px;
+  background: linear-gradient(#60a5fa, #a78bfa);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #stationLiveResults .station-train-card,
+  #stationLiveResults .station-day-chip {
+    transition: none;
+  }
+
+  #stationLiveResults .station-train-card:hover,
+  #stationLiveResults .station-day-chip:hover {
+    transform: none;
+  }
+}
+
+
+/* RAIL DARPAN VIBRANT HORIZON THEME V1 */
+
+:root {
+  --rd-navy: #101a3c;
+  --rd-indigo: #4f46e5;
+  --rd-violet: #7c3aed;
+  --rd-cyan: #0891b2;
+  --rd-saffron: #f59e0b;
+  --rd-ink: #192644;
+  --rd-muted: #64748b;
+  --rd-line: #dce5f5;
+  --rd-glass: rgba(255, 255, 255, 0.92);
+}
+
+html {
+  scroll-behavior: smooth;
+  scroll-padding-top: 90px;
+}
+
+body {
+  color: var(--rd-ink) !important;
+  background:
+    radial-gradient(ellipse at 5% 8%, rgba(129, 140, 248, .12), transparent 32%),
+    radial-gradient(ellipse at 95% 38%, rgba(34, 211, 238, .10), transparent 30%),
+    linear-gradient(180deg, #f7f8ff 0%, #f3f7ff 45%, #f8faff 100%) !important;
+}
+
+::selection {
+  color: #fff;
+  background: #4f46e5;
+}
+
+a {
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+}
+
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 3px solid rgba(6, 182, 212, .55) !important;
+  outline-offset: 3px;
+}
+
+/* Top announcement strip and navigation */
+.topline,
+.top-bar,
+.topbar,
+.announcement-bar {
+  color: #eef2ff !important;
+  background: linear-gradient(105deg, #111936, #312e81, #164e78) !important;
+  border-bottom: 1px solid rgba(165, 180, 252, .24);
+}
+
+body > header,
+.site-header,
+.main-header,
+.navbar {
+  color: #f8fafc !important;
+  background: linear-gradient(115deg, #111936 0%, #25245f 58%, #155e75 100%) !important;
+  border-bottom: 1px solid rgba(165, 180, 252, .3) !important;
+  box-shadow: 0 8px 28px rgba(30, 41, 89, .17) !important;
+}
+
+body > header a,
+.site-header a,
+.main-header a,
+.navbar a,
+header nav a {
+  color: #eef2ff !important;
+  transition: color .18s ease, opacity .18s ease;
+}
+
+body > header a:hover,
+.site-header a:hover,
+.main-header a:hover,
+.navbar a:hover,
+header nav a:hover {
+  color: #67e8f9 !important;
+}
+
+body > header h1,
+body > header h2,
+.site-header h1,
+.site-header h2,
+.site-header .brand-name,
+.main-header h1 {
+  color: #fff !important;
+}
+
+/* Hero: strong colour, readable white text */
+.hero,
+.hero-section,
+.hero-banner,
+#hero,
+#home {
+  color: #fff;
+  background:
+    radial-gradient(ellipse at 85% 18%, rgba(34, 211, 238, .28), transparent 34%),
+    radial-gradient(ellipse at 72% 100%, rgba(167, 139, 250, .28), transparent 38%),
+    linear-gradient(125deg, #101a3c 0%, #312e81 52%, #075985 100%) !important;
+}
+
+.hero h1,
+.hero h2,
+.hero h3,
+.hero .hero-title,
+.hero-section h1,
+.hero-section h2,
+#hero h1,
+#hero h2,
+#home h1,
+#home h2 {
+  color: #fff !important;
+  text-wrap: balance;
+}
+
+.hero p,
+.hero-section p,
+#hero p,
+#home p {
+  color: #e0eaff;
+}
+
+.hero .eyebrow,
+.hero .kicker,
+.hero .hero-kicker {
+  color: #fde68a !important;
+}
+
+/* Page headings and section accents */
+h1,
+h2,
+h3,
+.section-heading h3 {
+  color: var(--rd-ink);
+}
+
+.section-heading h3,
+.search-panel h3 {
+  letter-spacing: -.035em;
+}
+
+.section-kicker,
+.eyebrow,
+.section-label {
+  color: #6d28d9 !important;
+  font-weight: 800;
+  letter-spacing: .12em;
+}
+
+.section-heading p,
+.search-panel .sub {
+  color: var(--rd-muted);
+}
+
+/* Main panels and forms */
+.search-panel,
+#search .search-panel,
+.result-panel,
+.station-area,
+#station-tools .search-panel {
+  border: 1px solid rgba(199, 210, 254, .8) !important;
+  border-radius: 18px !important;
+  background: linear-gradient(145deg, #fff 0%, #f8faff 70%, #f0f9ff 100%) !important;
+  box-shadow: 0 12px 38px rgba(45, 55, 120, .09) !important;
+}
+
+.search-panel,
+#search .search-panel {
+  position: relative;
+  overflow: hidden;
+}
+
+.search-panel::before {
+  content: "";
+  display: block;
+  height: 4px;
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  background: linear-gradient(90deg, #6366f1, #8b5cf6, #06b6d4, #fbbf24);
+}
+
+.field label,
+label {
+  color: #334155;
+  font-weight: 700;
+}
+
+input,
+select,
+textarea {
+  border: 1px solid #d6def1 !important;
+  border-radius: 11px !important;
+  background: #fff !important;
+  color: #172554 !important;
+  box-shadow: 0 2px 5px rgba(30, 41, 89, .025);
+  transition: border-color .18s ease, box-shadow .18s ease;
+}
+
+input:hover,
+select:hover,
+textarea:hover {
+  border-color: #a5b4fc !important;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  border-color: #6366f1 !important;
+  box-shadow: 0 0 0 4px rgba(99, 102, 241, .13) !important;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: #94a3b8 !important;
+}
+
+/* Primary actions and mode tabs */
+button,
+.primary,
+.btn,
+.button,
+a.button,
+input[type="submit"],
+input[type="button"] {
+  border-radius: 11px;
+  font-weight: 750;
+  transition: transform .18s ease, box-shadow .18s ease,
+              background .18s ease, filter .18s ease;
+}
+
+button:not(:disabled),
+.primary,
+.btn,
+.button,
+a.button,
+input[type="submit"],
+input[type="button"] {
+  background: linear-gradient(115deg, #4f46e5 0%, #6d28d9 54%, #0891b2 100%) !important;
+  color: #fff !important;
+  border-color: transparent !important;
+  box-shadow: 0 5px 15px rgba(79, 70, 229, .18);
+}
+
+button:not(:disabled):hover,
+.primary:hover,
+.btn:hover,
+.button:hover,
+a.button:hover,
+input[type="submit"]:hover,
+input[type="button"]:hover {
+  filter: brightness(1.06) saturate(1.08);
+  box-shadow: 0 8px 22px rgba(79, 70, 229, .26);
+  transform: translateY(-1px);
+}
+
+button:disabled,
+.primary:disabled {
+  opacity: .6;
+  cursor: not-allowed;
+}
+
+.tab,
+.mode-tab,
+.mode-button,
+[data-mode] {
+  border-radius: 10px;
+}
+
+.tab.active,
+.mode-tab.active,
+.mode-button.active,
+[data-mode].active,
+[aria-selected="true"] {
+  background: linear-gradient(115deg, #4338ca, #7c3aed, #0891b2) !important;
+  color: #fff !important;
+  border-color: transparent !important;
+  box-shadow: 0 5px 15px rgba(79, 70, 229, .19);
+}
+
+/* Service and news cards */
+.service-card,
+.feature-card,
+.service-item,
+#services .services-grid > *,
+#railwayNewsFeed > *,
+#railway-news .services-grid > * {
+  border: 1px solid #e0e7ff !important;
+  border-radius: 15px !important;
+  background: linear-gradient(145deg, #fff 0%, #f8faff 65%, #f0f9ff 100%) !important;
+  box-shadow: 0 7px 23px rgba(37, 51, 112, .065);
+  transition: border-color .2s ease, box-shadow .2s ease,
+              transform .2s ease;
+}
+
+.service-card:hover,
+.feature-card:hover,
+.service-item:hover,
+#services .services-grid > *:hover,
+#railwayNewsFeed > *:hover,
+#railway-news .services-grid > *:hover {
+  border-color: #a5b4fc !important;
+  box-shadow: 0 13px 30px rgba(79, 70, 229, .13);
+  transform: translateY(-3px);
+}
+
+.service-icon,
+.feature-icon {
+  color: #fff !important;
+  background: linear-gradient(135deg, #4f46e5, #8b5cf6 55%, #06b6d4) !important;
+  border-radius: 13px;
+  box-shadow: 0 5px 13px rgba(79, 70, 229, .2);
+}
+
+.inline-action,
+.service-card a,
+.feature-card a {
+  color: #4f46e5;
+  font-weight: 750;
+}
+
+.inline-action:hover,
+.service-card a:hover,
+.feature-card a:hover {
+  color: #0891b2;
+}
+
+/* PNR, train and station results */
+.result-grid > *,
+.result-item,
+.station-result,
+.station-box,
+#stationResults .result-item,
+#pnrHistoryList > *,
+#result .result-item {
+  border-color: #dbe4fb;
+  border-radius: 12px;
+}
+
+.result-success {
+  color: #047857;
+}
+
+.result-error {
+  color: #be123c;
+}
+
+.result-warning {
+  color: #b45309;
+}
+
+/* Vibrant, consistent station list */
+#stationLiveResults .station-train-card {
+  border: 1px solid #dbe4ff !important;
+  border-left: 4px solid #6366f1 !important;
+  border-radius: 13px !important;
+  background: linear-gradient(110deg, #eef2ff 0%, #fff 53%, #ecfeff 100%) !important;
+  box-shadow: 0 4px 14px rgba(79, 70, 229, .09);
+}
+
+#stationLiveResults .station-train-card:hover {
+  border-color: #a5b4fc !important;
+  box-shadow: 0 8px 20px rgba(79, 70, 229, .16);
+}
+
+#stationLiveResults .station-train-number {
+  color: #fff !important;
+  background: linear-gradient(110deg, #4338ca, #7c3aed) !important;
+}
+
+#stationLiveResults .station-train-name {
+  color: #1e1b4b !important;
+}
+
+#stationLiveResults .station-train-route {
+  border: 1px solid #a5f3fc;
+  border-radius: 9px;
+  color: #0e7490 !important;
+  background: linear-gradient(110deg, #cffafe, #d1fae5) !important;
+}
+
+#stationLiveResults .station-train-metric {
+  border-radius: 9px;
+}
+
+#stationLiveResults .station-day-chip {
+  border: 1px solid #c4b5fd;
+  border-radius: 18px;
+  color: #4338ca !important;
+  background: linear-gradient(120deg, #ede9fe, #e0f2fe) !important;
+}
+
+/* News feed polish */
+#railwayNewsFeed img,
+#railway-news img {
+  border-radius: 11px;
+}
+
+#railwayNewsFeed h3,
+#railwayNewsFeed h4,
+#railway-news h3,
+#railway-news h4 {
+  color: #22205a;
+}
+
+#railwayNewsFeed a,
+#railway-news a {
+  overflow-wrap: anywhere;
+}
+
+/* About/footer areas */
+.about-strip,
+#about {
+  border-color: #dbeafe;
+}
+
+footer,
+.site-footer,
+#footer {
+  color: #e0e7ff !important;
+  background: linear-gradient(115deg, #111936, #312e81 62%, #164e78) !important;
+  border-top: 1px solid rgba(165, 180, 252, .3);
+}
+
+footer p,
+footer small,
+.site-footer p,
+#footer p {
+  color: #cbd5e1;
+}
+
+footer a,
+.site-footer a,
+#footer a {
+  color: #67e8f9 !important;
+}
+
+/* Polished scrollbar and small-screen layout */
+* {
+  scrollbar-color: #a5b4fc #eef2ff;
+}
+
+@media (max-width: 700px) {
+  body {
+    background:
+      radial-gradient(ellipse at 10% 0%, rgba(129, 140, 248, .1), transparent 30%),
+      linear-gradient(180deg, #f7f8ff, #f4f8ff) !important;
+  }
+
+  .search-panel,
+  #search .search-panel,
+  .station-area {
+    border-radius: 14px !important;
+  }
+
+  .service-card,
+  .feature-card {
+    padding: 18px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition-duration: .01ms !important;
+    animation-duration: .01ms !important;
+  }
+}
+
+
+/* RAIL DARPAN NEWS ALIGNMENT V1 */
+
+#railway-news {
+  box-sizing: border-box;
+  padding-inline: clamp(14px, 3vw, 28px);
+}
+
+#railway-news > *,
+#railwayNewsFeed > * {
+  box-sizing: border-box;
+  min-width: 0;
+}
+
+#railwayNewsFeed,
+#railway-news .services-grid {
+  box-sizing: border-box;
+  display: grid;
+  gap: 18px;
+  padding: 8px;
+  width: 100%;
+}
+
+#railwayNewsFeed > *,
+#railway-news .services-grid > * {
+  box-sizing: border-box;
+  min-width: 0;
+  max-width: 100%;
+  margin: 0 !important;
+  padding: 18px !important;
+  overflow-wrap: anywhere;
+}
+
+#railwayNewsFeed img,
+#railway-news .services-grid img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin: 0 0 14px;
+  border-radius: 10px;
+}
+
+#railwayNewsFeed h3,
+#railwayNewsFeed h4,
+#railway-news .services-grid h3,
+#railway-news .services-grid h4 {
+  margin-top: 0;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+#railwayNewsFeed p,
+#railway-news .services-grid p {
+  line-height: 1.65;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 600px) {
+  #railway-news {
+    padding-inline: 10px;
+  }
+
+  #railwayNewsFeed,
+  #railway-news .services-grid {
+    gap: 12px;
+    padding: 4px;
+  }
+
+  #railwayNewsFeed > *,
+  #railway-news .services-grid > * {
+    padding: 14px !important;
+  }
+}
+\n
+/* RAIL DARPAN PREMIUM FEATURE ZONE V1 */
+
+#services {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  padding: clamp(24px, 4vw, 48px);
+  margin-block: clamp(24px, 4vw, 48px);
+  border: 1px solid rgba(129, 140, 248, .38);
+  border-radius: 28px;
+  color: #f8fafc !important;
+  background:
+    radial-gradient(ellipse at 4% 5%, rgba(34, 211, 238, .22), transparent 35%),
+    radial-gradient(ellipse at 95% 90%, rgba(168, 85, 247, .25), transparent 38%),
+    linear-gradient(130deg, #101832 0%, #20245a 48%, #073b59 100%) !important;
+  box-shadow: 0 20px 55px rgba(30, 41, 89, .20);
+}
+
+#services::before,
+#services::after {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  pointer-events: none;
+  border-radius: 50%;
+  filter: blur(2px);
+}
+
+#services::before {
+  width: 250px;
+  height: 250px;
+  top: -130px;
+  right: 6%;
+  background: radial-gradient(circle, rgba(99, 102, 241, .27), transparent 70%);
+}
+
+#services::after {
+  width: 300px;
+  height: 300px;
+  bottom: -180px;
+  left: 12%;
+  background: radial-gradient(circle, rgba(6, 182, 212, .20), transparent 70%);
+}
+
+#services > * {
+  position: relative;
+}
+
+#services h1,
+#services h2,
+#services h3,
+#services .section-heading h2,
+#services .section-heading h3 {
+  color: #fff !important;
+}
+
+#services p,
+#services .section-heading p {
+  color: #dbeafe !important;
+}
+
+#services .section-kicker,
+#services .eyebrow,
+#services .section-label {
+  color: #fde68a !important;
+}
+
+#services .services-grid {
+  gap: 18px;
+  margin-top: 24px;
+}
+
+#services .services-grid > * {
+  position: relative;
+  isolation: isolate;
+  min-width: 0;
+  overflow: hidden;
+  padding: 22px !important;
+  border: 1px solid rgba(191, 219, 254, .24) !important;
+  border-radius: 17px !important;
+  color: #f8fafc !important;
+  background:
+    linear-gradient(145deg, rgba(255,255,255,.12), rgba(255,255,255,.035)),
+    linear-gradient(135deg, #202a55, #172b48) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.09),
+    0 9px 24px rgba(5, 12, 35, .18) !important;
+  transition: transform .22s ease, border-color .22s ease,
+              box-shadow .22s ease;
+}
+
+#services .services-grid > :nth-child(6n + 1) {
+  border-top: 3px solid #60a5fa !important;
+}
+
+#services .services-grid > :nth-child(6n + 2) {
+  border-top: 3px solid #a78bfa !important;
+}
+
+#services .services-grid > :nth-child(6n + 3) {
+  border-top: 3px solid #22d3ee !important;
+}
+
+#services .services-grid > :nth-child(6n + 4) {
+  border-top: 3px solid #34d399 !important;
+}
+
+#services .services-grid > :nth-child(6n + 5) {
+  border-top: 3px solid #fbbf24 !important;
+}
+
+#services .services-grid > :nth-child(6n + 6) {
+  border-top: 3px solid #fb7185 !important;
+}
+
+#services .services-grid > *:hover {
+  transform: translateY(-5px);
+  border-color: rgba(103, 232, 249, .65) !important;
+  box-shadow: 0 17px 32px rgba(5, 12, 35, .28) !important;
+}
+
+#services .services-grid > * h1,
+#services .services-grid > * h2,
+#services .services-grid > * h3,
+#services .services-grid > * h4 {
+  color: #fff !important;
+  line-height: 1.4;
+}
+
+#services .services-grid > * p {
+  color: #dbeafe !important;
+  line-height: 1.7;
+}
+
+#services .services-grid > * a:not(.service-icon):not(.feature-icon) {
+  color: #a5f3fc !important;
+  font-weight: 650;
+}
+
+#services .services-grid > * a:not(.service-icon):not(.feature-icon):hover {
+  color: #fde68a !important;
+}
+
+#services .service-icon,
+#services .feature-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 48px;
+  min-height: 48px;
+  border: 1px solid rgba(255,255,255,.24);
+  border-radius: 14px !important;
+  color: #fff !important;
+  background: linear-gradient(135deg, #4f46e5, #7c3aed 55%, #0891b2) !important;
+  box-shadow: 0 7px 19px rgba(79, 70, 229, .3);
+}
+
+@media (max-width: 600px) {
+  #services {
+    padding: 22px 14px;
+    border-radius: 20px;
+    margin-block: 24px;
+  }
+
+  #services .services-grid {
+    gap: 13px;
+    margin-top: 18px;
+  }
+
+  #services .services-grid > * {
+    padding: 17px !important;
+    border-radius: 14px !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #services .services-grid > * {
+    transition: none;
+  }
+
+  #services .services-grid > *:hover {
+    transform: none;
+  }
+}
+\n
+/* RAIL DARPAN PREMIUM VISIBILITY FIX V2 */
+
+#services {
+  box-sizing: border-box !important;
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  padding: clamp(24px, 4vw, 48px) !important;
+  margin-block: 32px !important;
+  border: 1px solid #394a85 !important;
+  border-radius: 26px !important;
+  color: #f8fafc !important;
+  background:
+    radial-gradient(ellipse at 8% 0%, rgba(34,211,238,.24), transparent 36%),
+    radial-gradient(ellipse at 95% 100%, rgba(139,92,246,.30), transparent 40%),
+    linear-gradient(125deg, #10172f 0%, #24245a 54%, #073b55 100%) !important;
+  box-shadow: 0 22px 60px rgba(24, 35, 90, .22) !important;
+}
+
+#services > .container,
+#services .container,
+#services .section-inner,
+#services .services-container {
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+#services .section-heading,
+#services .section-heading * {
+  background-color: transparent !important;
+}
+
+#services h1,
+#services h2,
+#services h3,
+#services h4,
+#services .section-heading h1,
+#services .section-heading h2,
+#services .section-heading h3 {
+  color: #ffffff !important;
+  opacity: 1 !important;
+  text-shadow: 0 2px 16px rgba(0,0,0,.16);
+}
+
+#services p,
+#services .section-heading p,
+#services .sub {
+  color: #dbeafe !important;
+  opacity: 1 !important;
+  line-height: 1.75;
+}
+
+#services .section-kicker,
+#services .eyebrow,
+#services .section-label {
+  color: #fde68a !important;
+  opacity: 1 !important;
+}
+
+#services .services-grid {
+  display: grid;
+  gap: 18px !important;
+  margin-top: 25px;
+}
+
+#services .services-grid > *,
+#services .service-card,
+#services .feature-card,
+#services .service-item {
+  box-sizing: border-box !important;
+  min-width: 0;
+  padding: 22px !important;
+  border: 1px solid rgba(191,219,254,.28) !important;
+  border-top: 3px solid #60a5fa !important;
+  border-radius: 17px !important;
+  color: #f8fafc !important;
+  opacity: 1 !important;
+  background:
+    linear-gradient(140deg, rgba(255,255,255,.13), rgba(255,255,255,.035)),
+    #192444 !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.08),
+    0 10px 28px rgba(0,0,0,.17) !important;
+  transition: transform .2s ease, box-shadow .2s ease,
+              border-color .2s ease;
+}
+
+#services .services-grid > :nth-child(6n + 2) {
+  border-top-color: #a78bfa !important;
+}
+
+#services .services-grid > :nth-child(6n + 3) {
+  border-top-color: #22d3ee !important;
+}
+
+#services .services-grid > :nth-child(6n + 4) {
+  border-top-color: #34d399 !important;
+}
+
+#services .services-grid > :nth-child(6n + 5) {
+  border-top-color: #fbbf24 !important;
+}
+
+#services .services-grid > :nth-child(6n + 6) {
+  border-top-color: #fb7185 !important;
+}
+
+/* Explicit contrast for text inside each feature card */
+#services .services-grid > * h1,
+#services .services-grid > * h2,
+#services .services-grid > * h3,
+#services .services-grid > * h4,
+#services .services-grid > * strong,
+#services .services-grid > * span,
+#services .services-grid > * li,
+#services .services-grid > * label {
+  color: #f8fafc !important;
+  opacity: 1 !important;
+}
+
+#services .services-grid > * p,
+#services .services-grid > * .description,
+#services .services-grid > * small {
+  color: #dbeafe !important;
+  opacity: 1 !important;
+}
+
+#services .services-grid > * a {
+  color: #a5f3fc !important;
+  opacity: 1 !important;
+  font-weight: 700;
+  text-decoration-color: rgba(165,243,252,.55);
+}
+
+#services .services-grid > * a:hover {
+  color: #fde68a !important;
+}
+
+#services .service-icon,
+#services .feature-icon,
+#services .services-grid > * .service-icon,
+#services .services-grid > * .feature-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 50px;
+  min-height: 50px;
+  border: 1px solid rgba(255,255,255,.25) !important;
+  border-radius: 15px !important;
+  color: #ffffff !important;
+  background: linear-gradient(135deg, #4f46e5, #7c3aed 55%, #0891b2) !important;
+  box-shadow: 0 7px 20px rgba(79,70,229,.34) !important;
+}
+
+#services .services-grid > *:hover,
+#services .service-card:hover,
+#services .feature-card:hover {
+  transform: translateY(-4px);
+  border-color: rgba(103,232,249,.75) !important;
+  box-shadow: 0 17px 35px rgba(0,0,0,.27) !important;
+}
+
+#services a:focus-visible,
+#services button:focus-visible {
+  outline: 3px solid #67e8f9 !important;
+  outline-offset: 3px;
+}
+
+@media (max-width: 600px) {
+  #services {
+    padding: 22px 14px !important;
+    border-radius: 19px !important;
+  }
+
+  #services .services-grid {
+    gap: 13px !important;
+    margin-top: 18px;
+  }
+
+  #services .services-grid > *,
+  #services .service-card,
+  #services .feature-card,
+  #services .service-item {
+    padding: 17px !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #services .services-grid > * {
+    transition: none !important;
+  }
+
+  #services .services-grid > *:hover {
+    transform: none;
+  }
+}
+
+
+/* RAIL DARPAN SERVICES REAL CLASS FIX V3 */
+
+#services {
+  position: relative;
+  isolation: isolate;
+  box-sizing: border-box;
+  padding: clamp(24px, 4vw, 44px) !important;
+  border: 1px solid #394a85 !important;
+  border-radius: 26px !important;
+  color: #f8fafc !important;
+  background:
+    radial-gradient(ellipse at 8% 0%, rgba(34, 211, 238, .22), transparent 36%),
+    radial-gradient(ellipse at 95% 100%, rgba(139, 92, 246, .28), transparent 38%),
+    linear-gradient(125deg, #10172f 0%, #25245b 54%, #073b55 100%) !important;
+  box-shadow: 0 20px 55px rgba(24, 35, 90, .22) !important;
+}
+
+#services .section-heading h3 {
+  color: #ffffff !important;
+  opacity: 1 !important;
+  font-size: clamp(24px, 3vw, 32px);
+  letter-spacing: -.5px;
+}
+
+#services .section-heading p {
+  color: #dbeafe !important;
+  opacity: 1 !important;
+  line-height: 1.75;
+}
+
+#services .cards {
+  gap: 18px !important;
+  margin-top: 24px;
+}
+
+#services .cards > a.card,
+#services .cards > a.card:link,
+#services .cards > a.card:visited {
+  box-sizing: border-box !important;
+  min-width: 0;
+  padding: 23px !important;
+  border: 1px solid rgba(191, 219, 254, .30) !important;
+  border-top: 3px solid #60a5fa !important;
+  border-radius: 18px !important;
+  color: #f8fafc !important;
+  text-decoration: none !important;
+  opacity: 1 !important;
+  background:
+    linear-gradient(140deg, rgba(255,255,255,.12), rgba(255,255,255,.025)),
+    #192444 !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.08),
+    0 10px 28px rgba(0,0,0,.18) !important;
+  transition: transform .2s ease, border-color .2s ease,
+              box-shadow .2s ease;
+}
+
+#services .cards > a.card:nth-child(6n + 2) {
+  border-top-color: #a78bfa !important;
+}
+
+#services .cards > a.card:nth-child(6n + 3) {
+  border-top-color: #22d3ee !important;
+}
+
+#services .cards > a.card:nth-child(6n + 4) {
+  border-top-color: #34d399 !important;
+}
+
+#services .cards > a.card:nth-child(6n + 5) {
+  border-top-color: #fbbf24 !important;
+}
+
+#services .cards > a.card:nth-child(6n + 6) {
+  border-top-color: #fb7185 !important;
+}
+
+#services .cards > a.card h4 {
+  margin: 14px 0 9px;
+  color: #ffffff !important;
+  opacity: 1 !important;
+  font-size: 18px;
+  font-weight: 750;
+  line-height: 1.45;
+}
+
+#services .cards > a.card p {
+  margin: 0;
+  color: #dbeafe !important;
+  opacity: 1 !important;
+  font-size: 14px;
+  line-height: 1.75;
+}
+
+#services .cards > a.card .card-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 54px;
+  height: 54px;
+  margin-bottom: 12px;
+  border: 1px solid rgba(255,255,255,.25) !important;
+  border-radius: 16px !important;
+  color: #ffffff !important;
+  font-size: 25px;
+  background: linear-gradient(135deg, #4f46e5, #7c3aed 55%, #0891b2) !important;
+  box-shadow: 0 7px 20px rgba(79,70,229,.32) !important;
+}
+
+#services .cards > a.card:nth-child(6n + 2) .card-icon {
+  background: linear-gradient(135deg, #7c3aed, #a21caf) !important;
+}
+
+#services .cards > a.card:nth-child(6n + 3) .card-icon {
+  background: linear-gradient(135deg, #0891b2, #2563eb) !important;
+}
+
+#services .cards > a.card:nth-child(6n + 4) .card-icon {
+  background: linear-gradient(135deg, #059669, #0e7490) !important;
+}
+
+#services .cards > a.card:nth-child(6n + 5) .card-icon {
+  background: linear-gradient(135deg, #d97706, #e11d48) !important;
+}
+
+#services .cards > a.card:nth-child(6n + 6) .card-icon {
+  background: linear-gradient(135deg, #db2777, #7c3aed) !important;
+}
+
+#services .cards > a.card:hover {
+  transform: translateY(-5px);
+  border-color: rgba(103, 232, 249, .75) !important;
+  box-shadow: 0 17px 35px rgba(0,0,0,.28) !important;
+}
+
+#services .cards > a.card:focus-visible {
+  outline: 3px solid #67e8f9 !important;
+  outline-offset: 4px;
+}
+
+@media (max-width: 600px) {
+  #services {
+    padding: 22px 14px !important;
+    border-radius: 20px !important;
+  }
+
+  #services .cards {
+    gap: 13px !important;
+    margin-top: 18px;
+  }
+
+  #services .cards > a.card {
+    padding: 18px !important;
+    border-radius: 15px !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #services .cards > a.card {
+    transition: none !important;
+  }
+
+  #services .cards > a.card:hover {
+    transform: none;
+  }
+}
+
 </style>
 </head>
 <body>
