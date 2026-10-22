@@ -2117,7 +2117,295 @@ function renderCompactLiveStatus(data, payload, panel) {
         margin:8px 0 0; padding:9px; border-radius:8px;
         background:#fff8e7; color:#805b17; font-size:11px; line-height:1.5;
       }
+
+      /* RAIL DARPAN LIVE STATUS PREMIUM UI V1 */
+
+      .result-panel.live-result-panel {
+        position: relative;
+        box-sizing: border-box;
+        overflow: hidden;
+        padding: clamp(15px, 2.5vw, 25px) !important;
+        border: 1px solid #c7d2fe !important;
+        border-radius: 22px !important;
+        color: #172554 !important;
+        background:
+          radial-gradient(ellipse at 100% 0%, rgba(103,232,249,.20), transparent 32%),
+          radial-gradient(ellipse at 0% 100%, rgba(167,139,250,.14), transparent 34%),
+          linear-gradient(145deg, #ffffff 0%, #f8faff 58%, #eef2ff 100%) !important;
+        box-shadow: 0 18px 45px rgba(49,46,129,.13) !important;
+      }
+
+      .result-panel.live-result-panel::before {
+        content: "";
+        display: block;
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 5px;
+        background: linear-gradient(90deg, #4f46e5, #8b5cf6, #06b6d4, #34d399);
+        pointer-events: none;
+      }
+
+      .live-result-panel > h4 {
+        margin: 5px 0 12px;
+        color: #172554 !important;
+        font-size: clamp(21px, 3vw, 29px);
+        font-weight: 850;
+        letter-spacing: -.6px;
+        line-height: 1.3;
+        overflow-wrap: anywhere;
+      }
+
+      .live-result-panel .live-v3-head {
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 16px;
+        padding: 13px 15px;
+        border: 1px solid #c7d2fe;
+        border-radius: 14px;
+        background: linear-gradient(115deg, #eef2ff, #f5f3ff 55%, #ecfeff);
+      }
+
+      .live-result-panel .live-v3-subtitle {
+        color: #475569;
+        font-size: 12px;
+        font-weight: 650;
+        line-height: 1.65;
+      }
+
+      .live-result-panel .live-v3-badge {
+        padding: 8px 12px;
+        border: 1px solid #cbd5e1;
+        border-radius: 999px;
+        color: #334155;
+        background: #f1f5f9;
+        font-size: 11px;
+        font-weight: 850;
+        letter-spacing: .35px;
+        box-shadow: 0 2px 6px rgba(15,23,42,.05);
+      }
+
+      .live-result-panel .live-v3-badge.good {
+        color: #166534;
+        border-color: #86efac;
+        background: linear-gradient(120deg, #dcfce7, #bbf7d0);
+      }
+
+      .live-result-panel .live-v3-badge.warn {
+        color: #92400e;
+        border-color: #fcd34d;
+        background: linear-gradient(120deg, #fef3c7, #fde68a);
+      }
+
+      .live-result-panel .live-v3-badge.bad {
+        color: #991b1b;
+        border-color: #fda4af;
+        background: linear-gradient(120deg, #fee2e2, #fecdd3);
+      }
+
+      .live-result-panel .live-v3-grid {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 11px;
+        margin: 14px 0 17px;
+      }
+
+      .live-result-panel .live-v3-card {
+        position: relative;
+        min-width: 0;
+        padding: 15px 13px;
+        overflow: hidden;
+        border: 1px solid #dbeafe;
+        border-radius: 15px;
+        background: linear-gradient(145deg, #ffffff, #eff6ff);
+        box-shadow: 0 5px 16px rgba(37,99,235,.06);
+        transition: transform .18s ease, box-shadow .18s ease;
+      }
+
+      .live-result-panel .live-v3-card:nth-child(2) {
+        border-color: #fed7aa;
+        background: linear-gradient(145deg, #ffffff, #fff7ed);
+      }
+
+      .live-result-panel .live-v3-card:nth-child(3) {
+        border-color: #c4b5fd;
+        background: linear-gradient(145deg, #ffffff, #f5f3ff);
+      }
+
+      .live-result-panel .live-v3-card:nth-child(4) {
+        border-color: #a5f3fc;
+        background: linear-gradient(145deg, #ffffff, #ecfeff);
+      }
+
+      .live-result-panel .live-v3-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 9px 22px rgba(79,70,229,.11);
+      }
+
+      .live-result-panel .live-v3-label {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        margin-bottom: 8px;
+        color: #64748b;
+        font-size: 10px;
+        font-weight: 800;
+        letter-spacing: .6px;
+        text-transform: uppercase;
+        line-height: 1.4;
+      }
+
+      .live-result-panel .live-v3-card:nth-child(1) .live-v3-label::before {
+        content: "📍";
+      }
+
+      .live-result-panel .live-v3-card:nth-child(2) .live-v3-label::before {
+        content: "⏱️";
+      }
+
+      .live-result-panel .live-v3-card:nth-child(3) .live-v3-label::before {
+        content: "🚉";
+      }
+
+      .live-result-panel .live-v3-card:nth-child(4) .live-v3-label::before {
+        content: "⚡";
+      }
+
+      .live-result-panel .live-v3-value {
+        color: #172554;
+        font-size: clamp(13px, 1.5vw, 17px);
+        font-weight: 850;
+        line-height: 1.5;
+        overflow-wrap: anywhere;
+      }
+
+      .live-result-panel .live-v3-section {
+        margin-top: 15px;
+        padding: 15px;
+        border: 1px solid #dbe4ff;
+        border-radius: 16px;
+        background: linear-gradient(145deg, #ffffff, #f8faff);
+        box-shadow: 0 5px 18px rgba(37,51,112,.045);
+      }
+
+      .live-result-panel .live-v3-section-title {
+        margin: 0 0 12px;
+        padding-bottom: 10px;
+        border-bottom: 1px solid #e0e7ff;
+        color: #312e81;
+        font-size: 15px;
+        font-weight: 850;
+        line-height: 1.5;
+      }
+
+      .live-result-panel .live-v3-stop {
+        gap: 12px;
+        padding: 12px 5px;
+        border-top-color: #e8edf8;
+      }
+
+      .live-result-panel .live-v3-stop-name {
+        color: #1e293b;
+        font-size: 13px;
+        font-weight: 800;
+      }
+
+      .live-result-panel .live-v3-stop-meta {
+        color: #64748b;
+        line-height: 1.7;
+      }
+
+      .live-result-panel .live-v3-platform {
+        border: 1px solid #bae6fd;
+        border-radius: 9px;
+        color: #075985;
+        background: linear-gradient(130deg, #e0f2fe, #cffafe);
+      }
+
+      .live-result-panel .live-v3-details {
+        margin-top: 12px;
+        border: 1px solid #c7d2fe;
+        border-radius: 13px;
+        background: linear-gradient(145deg, #ffffff, #f5f3ff);
+      }
+
+      .live-result-panel .live-v3-details summary {
+        color: #4338ca;
+        font-weight: 800;
+      }
+
+      .live-result-panel .live-v3-note {
+        border: 1px solid #fde68a;
+        border-radius: 10px;
+        background: #fffbeb;
+        color: #92400e;
+        line-height: 1.65;
+      }
+
+      .live-result-panel .rd-live-coach-section {
+        margin-top: 15px;
+        padding: 15px;
+        border: 1px solid #c7d2fe;
+        border-radius: 16px;
+        background: linear-gradient(140deg, #eef2ff, #ffffff 58%, #ecfeff);
+        box-shadow: 0 6px 18px rgba(79,70,229,.07);
+      }
+
+      .live-result-panel .rd-live-coach-title {
+        color: #312e81;
+        font-size: 16px;
+        font-weight: 850;
+      }
+
+      .live-result-panel .rd-live-coach-tag {
+        border-radius: 999px;
+        color: #4338ca;
+        background: #e0e7ff;
+        font-weight: 800;
+      }
+
+      @media(max-width:900px) {
+        .live-result-panel .live-v3-grid {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+      }
+
       @media(max-width:600px) {
+        .result-panel.live-result-panel {
+          padding: 14px !important;
+          border-radius: 17px !important;
+        }
+
+        .live-result-panel .live-v3-head {
+          padding: 11px;
+        }
+
+        .live-result-panel .live-v3-grid {
+          gap: 8px;
+        }
+
+        .live-result-panel .live-v3-card {
+          padding: 11px 10px;
+          border-radius: 12px;
+        }
+
+        .live-result-panel .live-v3-section {
+          padding: 11px;
+          border-radius: 13px;
+        }
+      }
+
+      @media(prefers-reduced-motion:reduce) {
+        .live-result-panel .live-v3-card {
+          transition: none;
+        }
+
+        .live-result-panel .live-v3-card:hover {
+          transform: none;
+        }
+      }
+
+@media(max-width:600px) {
         .live-v3-grid { gap:7px; }
         .live-v3-card { padding:10px; }
         .live-v3-stop { gap:6px; }
@@ -2282,6 +2570,33 @@ function renderCompactLiveStatus(data, payload, panel) {
       }
       .live-v3-route-connector::before { top: 2px; }
       .live-v3-route-connector::after { top: 8px; }
+      .live-v3-route-connector.is-live-connector {
+        position: relative;
+        z-index: 4;
+        overflow: visible;
+      }
+      .live-v3-route-connector.is-live-connector .live-v3-route-current-icon {
+        position: absolute;
+        top: -10px;
+        left: 50%;
+        z-index: 5;
+        transform: translateX(-50%);
+        font-size: 18px;
+        line-height: 1;
+        white-space: nowrap;
+      }
+      .live-v3-route-connector.is-live-connector .live-v3-route-live-dot {
+        position: absolute;
+        top: -12px;
+        left: calc(50% + 3px);
+        z-index: 6;
+        width: 8px;
+        height: 8px;
+        border: 1.5px solid #ffffff;
+        border-radius: 50%;
+        box-sizing: border-box;
+      }
+
       @media(max-width:600px) {
         .live-v3-route-stop {
           flex-basis: 64px;
@@ -2392,6 +2707,34 @@ function renderCompactLiveStatus(data, payload, panel) {
     `live-v3-badge ${badgeTone}`);
   panel.appendChild(head);
 
+
+  /* RAIL-DARPAN-LIVE-PREMIUM-STRUCTURE-V2 */
+  if (source || destination) {
+    const journey = document.createElement("div");
+    journey.className = "live-v3-journey";
+
+    const fromBox = document.createElement("div");
+    fromBox.className = "live-v3-journey-stop";
+    addText(fromBox, "span", "FROM STATION", "live-v3-journey-label");
+    addText(fromBox, "strong", source || "Source not available",
+      "live-v3-journey-name");
+
+    const connector = document.createElement("div");
+    connector.className = "live-v3-journey-connector";
+    connector.setAttribute("aria-hidden", "true");
+    connector.textContent = "➜";
+
+    const toBox = document.createElement("div");
+    toBox.className = "live-v3-journey-stop";
+    addText(toBox, "span", "TO STATION", "live-v3-journey-label");
+    addText(toBox, "strong", destination || "Destination not available",
+      "live-v3-journey-name");
+
+    journey.append(fromBox, connector, toBox);
+    panel.appendChild(journey);
+  }
+
+
   let currentIndex = -1;
   let nextIndex = -1;
 
@@ -2433,6 +2776,16 @@ function renderCompactLiveStatus(data, payload, panel) {
   ].forEach(([label, value]) => {
     const card = document.createElement("div");
     card.className = "live-v3-card";
+    const icon = document.createElement("span");
+    icon.className = "live-v3-card-icon";
+    icon.setAttribute("aria-hidden", "true");
+    icon.textContent = ({
+      "Current location": "📍",
+      "Delay": "⏱️",
+      "Next station": "🚉",
+      "Current speed": "⚡"
+    })[label] || "🚆";
+    card.appendChild(icon);
     addText(card, "span", label, "live-v3-label");
     addText(card, "strong", value, "live-v3-value");
     grid.appendChild(card);
@@ -2481,15 +2834,57 @@ function renderCompactLiveStatus(data, payload, panel) {
     const track = document.createElement("div");
     track.className = "live-v3-route-track";
 
+    // RAIL DARPAN LIVE TRAIN BETWEEN STATIONS V1
+    const currentHaltPosition = haltStations.findIndex(
+      item => item.index === currentIndex
+    );
+    const nextHaltPosition = haltStations.findIndex(
+      item => item.index === nextIndex
+    );
+    const numericSpeed = Number.parseFloat(String(speed));
+
+    const feedIndicatesMovement =
+      /\b(running|in transit|between stations|on the way|departed|moving|approaching)\b/i
+        .test(String(status)) ||
+      (Number.isFinite(numericSpeed) && numericSpeed > 0);
+
+    const currentTrainInTransit =
+      currentHaltPosition >= 0 &&
+      nextHaltPosition === currentHaltPosition + 1 &&
+      feedIndicatesMovement;
+
     haltStations.forEach((item, visibleIndex) => {
       if (visibleIndex > 0) {
         const connector = document.createElement("div");
         connector.className = "live-v3-route-connector";
         connector.setAttribute("aria-hidden", "true");
+
+        const previousHalt = haltStations[visibleIndex - 1];
+        const isLiveSegment =
+          currentTrainInTransit &&
+          previousHalt.index === currentIndex &&
+          item.index === nextIndex;
+
+        if (isLiveSegment) {
+          connector.classList.add("is-live-connector");
+
+          const trainIcon = document.createElement("span");
+          trainIcon.className = "live-v3-route-current-icon";
+          trainIcon.textContent = "🚆";
+          trainIcon.setAttribute("role", "img");
+          trainIcon.setAttribute("aria-label", "Train currently travelling between stations");
+          connector.appendChild(trainIcon);
+
+          const liveDot = document.createElement("span");
+          liveDot.className = "live-v3-route-live-dot";
+          liveDot.setAttribute("aria-label", "Live movement");
+          connector.appendChild(liveDot);
+        }
+
         track.appendChild(connector);
       }
 
-      const isCurrent = currentIndex >= 0 && item.index === currentIndex;
+      const isCurrent = !currentTrainInTransit && currentIndex >= 0 && item.index === currentIndex;
 
       const stopCard = document.createElement("div");
       stopCard.className = "live-v3-route-stop" + (isCurrent ? " is-current" : "");
