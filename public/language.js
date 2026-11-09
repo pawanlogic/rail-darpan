@@ -229,7 +229,14 @@
     "Type": "प्रकार",
     "Name": "नाम",
     "Updated At": "अपडेट समय",
-    "Platform Number": "प्लेटफ़ॉर्म नंबर"
+    "Platform Number": "प्लेटफ़ॉर्म नंबर",
+    "Guides": "गाइड",
+    "Railway Guides": "रेलवे गाइड",
+    "About Us": "हमारे बारे में",
+    "Privacy Policy": "गोपनीयता नीति",
+    "Terms & Conditions": "नियम और शर्तें",
+    "Contact Us": "संपर्क करें",
+    "Read the detailed About Rail Darpan page →": "रेल दर्पण का विस्तृत परिचय पढ़ें →"
   };
 
   const HI_PATTERNS = [
