@@ -74,7 +74,7 @@
 
     nav.appendChild(installButton);
 
-    if (!isStandalone() && isAppleMobile()) {
+    if (!isStandalone()) {
       installButton.hidden = false;
     }
   }
