@@ -3422,31 +3422,61 @@ function rdScheduleV2AppendGroupedStops(parent, stops, offset, total) {
 }
 
 function rdScheduleV2Stop(stop, index) {
+  const isHalt = stop.isHalt === true || stop.is_halt === true;
+
   const row = document.createElement("div");
-  row.className = "rd-schedule-v2-stop";
+  row.className = `rd-schedule-v2-stop${isHalt ? " rd-schedule-v2-stop-halt" : ""}`;
 
   const main = document.createElement("div");
-  addText(main, "div", rdScheduleV2StationName(stop), "rd-schedule-v2-station");
+
+  const sequence = rdScheduleV2Value(stop, ["sequence", "stationSequence", "station_sequence"]) || String(index + 1);
+
+  const stationCode = rdScheduleV2Value(stop && stop.station, [
+    "code", "stationCode", "station_code"
+  ]) || rdScheduleV2Value(stop, ["stationCode", "station_code", "code"]);
+
+  const stationTitle = rdScheduleV2StationName(stop);
+
+  addText(
+    main,
+    "div",
+    `${sequence}. ${stationTitle}${stationCode ? ` (${stationCode})` : ""}`,
+    "rd-schedule-v2-station"
+  );
+
+  if (isHalt) {
+    addText(main, "span", "HALT", "rd-schedule-v2-halt-badge");
+  }
 
   const arr = rdScheduleV2Time(
     stop.scheduledArrival ?? stop.scheduled_arrival ?? stop.arrival
   );
+
   const dep = rdScheduleV2Time(
     stop.scheduledDeparture ?? stop.scheduled_departure ?? stop.departure
   );
 
   const arrDay = Number(stop.arrivalDay ?? stop.arrival_day ?? 1);
   const depDay = Number(stop.departureDay ?? stop.departure_day ?? 1);
-  const arrLabel = arr !== "—" && arrDay > 1 ? `${arr} (+${arrDay - 1}d)` : arr;
-  const depLabel = dep !== "—" && depDay > 1 ? `${dep} (+${depDay - 1}d)` : dep;
+
+  const arrLabel = arr !== "—" && arrDay > 1
+    ? `${arr} (+${arrDay - 1}d)`
+    : arr;
+
+  const depLabel = dep !== "—" && depDay > 1
+    ? `${dep} (+${depDay - 1}d)`
+    : dep;
 
   let halt = "Not available";
-  const explicitHalt = stop.haltDuration ?? stop.halt_duration ??
-    stop.stoppageDuration ?? stop.stoppage_duration ?? stop.dwellTime;
+
+  const explicitHalt =
+    stop.haltDuration ?? stop.halt_duration ??
+    stop.stoppageDuration ?? stop.stoppage_duration ??
+    stop.dwellTime ?? stop.haltMinutes ?? stop.halt_minutes;
 
   if (explicitHalt !== undefined && explicitHalt !== null) {
     halt = rdScheduleV2Duration(explicitHalt);
-  } else if (stop.isHalt === false || stop.is_halt === false) {
+  } else if (!isHalt && (stop.isHalt === false || stop.is_halt === false)) {
     halt = "Pass-through";
   } else if (arr === "—" && dep !== "—") {
     halt = index === 0 ? "Origin" : "—";
@@ -3455,6 +3485,7 @@ function rdScheduleV2Stop(stop, index) {
   } else {
     const am = arr.match(/^(\d{2}):(\d{2})$/);
     const dm = dep.match(/^(\d{2}):(\d{2})$/);
+
     if (am && dm) {
       const a = Number(am[1]) * 60 + Number(am[2]);
       const d = Number(dm[1]) * 60 + Number(dm[2]);
@@ -3467,23 +3498,240 @@ function rdScheduleV2Stop(stop, index) {
     `Dep ${depLabel}`,
     `Halt ${halt}`
   ];
+
   const distance = stop.distance ?? stop.distanceKm ?? stop.distance_km;
+
   if (distance !== undefined && distance !== null && distance !== "") {
     meta.push(`${distance} km`);
   }
+
   addText(main, "div", meta.join(" · "), "rd-schedule-v2-meta");
   row.appendChild(main);
 
   const platform = stop.platform ?? stop.platformNumber ??
     stop.platform_number ?? stop.platformNo ?? stop.platform_no;
 
-  addText(row, "span",
+  addText(
+    row,
+    "span",
     platform !== undefined && platform !== null && platform !== ""
-      ? `Platform ${platform}` : "Platform —",
-    "rd-schedule-v2-platform");
+      ? `Platform ${platform}`
+      : "Platform —",
+    "rd-schedule-v2-platform"
+  );
 
   return row;
 }
+
+/* rd-schedule-v3-day-timeline */
+
+function rdScheduleV2RenderJourneyOverview(train, route, panel) {
+  if (!route.length) return;
+
+  const first = route[0] || {};
+  const last = route[route.length - 1] || {};
+
+  const source = train.source && typeof train.source === "object"
+    ? train.source
+    : {};
+
+  const destination = train.destination && typeof train.destination === "object"
+    ? train.destination
+    : {};
+
+  const originName =
+    source.name || rdScheduleV2StationName(first);
+
+  const destinationName =
+    destination.name || rdScheduleV2StationName(last);
+
+  const originCode =
+    source.code || rdScheduleV2Value(first.station, ["code"]) || "";
+
+  const destinationCode =
+    destination.code || rdScheduleV2Value(last.station, ["code"]) || "";
+
+  const departure = rdScheduleV2Time(
+    first.departure ?? first.scheduledDeparture ?? first.scheduled_departure
+  );
+
+  const arrival = rdScheduleV2Time(
+    last.arrival ?? last.scheduledArrival ?? last.scheduled_arrival
+  );
+
+  const departureDay = Number(first.departureDay ?? first.departure_day ?? 1);
+  const arrivalDay = Number(last.arrivalDay ?? last.arrival_day ?? 1);
+
+  const section = document.createElement("section");
+  section.className = "rd-schedule-v2-journey";
+
+  addText(section, "h5", "Journey overview", "rd-schedule-v2-title");
+
+  const grid = document.createElement("div");
+  grid.className = "rd-schedule-v2-journey-grid";
+
+  const origin = document.createElement("div");
+  origin.className = "rd-schedule-v2-endpoint";
+
+  addText(origin, "span", "FROM", "rd-schedule-v2-endpoint-label");
+  addText(origin, "strong", originName, "rd-schedule-v2-endpoint-name");
+
+  if (originCode) {
+    addText(origin, "span", originCode, "rd-schedule-v2-endpoint-code");
+  }
+
+  addText(origin, "strong", departure, "rd-schedule-v2-endpoint-time");
+  addText(
+    origin,
+    "span",
+    `Departure · Day ${departureDay}`,
+    "rd-schedule-v2-endpoint-label"
+  );
+
+  const destinationBox = document.createElement("div");
+  destinationBox.className = "rd-schedule-v2-endpoint";
+
+  addText(destinationBox, "span", "TO", "rd-schedule-v2-endpoint-label");
+  addText(
+    destinationBox,
+    "strong",
+    destinationName,
+    "rd-schedule-v2-endpoint-name"
+  );
+
+  if (destinationCode) {
+    addText(
+      destinationBox,
+      "span",
+      destinationCode,
+      "rd-schedule-v2-endpoint-code"
+    );
+  }
+
+  addText(
+    destinationBox,
+    "strong",
+    arrival,
+    "rd-schedule-v2-endpoint-time"
+  );
+
+  addText(
+    destinationBox,
+    "span",
+    `Arrival · Day ${arrivalDay}`,
+    "rd-schedule-v2-endpoint-label"
+  );
+
+  grid.appendChild(origin);
+  grid.appendChild(destinationBox);
+  section.appendChild(grid);
+  panel.appendChild(section);
+}
+
+function rdScheduleV2RenderDayTimeline(route, panel) {
+  if (!route.length) return;
+
+  const groups = new Map();
+
+  route.forEach((stop, index) => {
+    const rawDay =
+      stop.arrivalDay ??
+      stop.arrival_day ??
+      stop.departureDay ??
+      stop.departure_day ??
+      1;
+
+    const parsedDay = Number(rawDay);
+    const day = Number.isFinite(parsedDay) && parsedDay > 0
+      ? Math.floor(parsedDay)
+      : 1;
+
+    if (!groups.has(day)) {
+      groups.set(day, {
+        stops: [],
+        indexes: [],
+        halts: 0
+      });
+    }
+
+    const group = groups.get(day);
+    group.stops.push(stop);
+    group.indexes.push(index);
+
+    if (rdScheduleV2IsHalt(stop, index, route.length)) {
+      group.halts++;
+    }
+  });
+
+  const section = document.createElement("section");
+  section.className = "rd-schedule-v2-timeline";
+
+  addText(section, "h5", "Day-wise journey timeline", "rd-schedule-v2-title");
+
+  const grid = document.createElement("div");
+  grid.className = "rd-schedule-v2-day-grid";
+
+  [...groups.entries()].sort((a, b) => a[0] - b[0]).forEach(([day, group]) => {
+    const first = group.stops[0];
+    const last = group.stops[group.stops.length - 1];
+
+    const firstTime = rdScheduleV2Time(
+      first.departure ?? first.arrival
+    );
+
+    const lastTime = rdScheduleV2Time(
+      last.arrival ?? last.departure
+    );
+
+    const card = document.createElement("article");
+    card.className = "rd-schedule-v2-day-card";
+
+    addText(card, "span", `DAY ${day}`, "rd-schedule-v2-day-number");
+
+    addText(
+      card,
+      "strong",
+      rdScheduleV2StationName(first),
+      "rd-schedule-v2-day-station"
+    );
+
+    addText(
+      card,
+      "span",
+      `Start ${firstTime}`,
+      "rd-schedule-v2-day-time"
+    );
+
+    addText(card, "span", "↓", "rd-schedule-v2-day-arrow");
+
+    addText(
+      card,
+      "strong",
+      rdScheduleV2StationName(last),
+      "rd-schedule-v2-day-station"
+    );
+
+    addText(
+      card,
+      "span",
+      `End ${lastTime}`,
+      "rd-schedule-v2-day-time"
+    );
+
+    addText(
+      card,
+      "span",
+      `${group.stops.length} route stations · ${group.halts} halting stations`,
+      "rd-schedule-v2-day-count"
+    );
+
+    grid.appendChild(card);
+  });
+
+  section.appendChild(grid);
+  panel.appendChild(section);
+}
+
 
 function renderCompactScheduleV2(payload, panel) {
   if (!document.getElementById("rd-schedule-v2-style")) {
@@ -3509,6 +3757,99 @@ function renderCompactScheduleV2(payload, panel) {
       .rd-schedule-v2-more { border:1px solid #e2e8f0;border-radius:10px;padding:0 12px;margin-top:10px;background:#fff; }
       .rd-schedule-v2-more summary { padding:12px 0;cursor:pointer;font-size:13px;font-weight:750;color:#173b57; }
       .rd-schedule-v2-scroll { max-height:300px;overflow:auto; }
+
+      .rd-schedule-v2-journey {
+        margin-top: 14px;
+        padding: 13px;
+        border: 1px solid #dce5f1;
+        border-radius: 12px;
+        background: #fff;
+      }
+      .rd-schedule-v2-journey-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 12px;
+      }
+      .rd-schedule-v2-endpoint {
+        min-width: 0;
+        padding: 13px;
+        border-radius: 10px;
+        background: #f3f7fd;
+      }
+      .rd-schedule-v2-endpoint-label,
+      .rd-schedule-v2-endpoint-code {
+        display: block;
+        color: #64748b;
+        font-size: 11px;
+        margin-bottom: 5px;
+      }
+      .rd-schedule-v2-endpoint-name {
+        display: block;
+        color: #173b70;
+        font-size: 15px;
+        overflow-wrap: anywhere;
+      }
+      .rd-schedule-v2-endpoint-time {
+        display: block;
+        margin-top: 10px;
+        color: #14532d;
+        font-size: 20px;
+      }
+      .rd-schedule-v2-timeline {
+        margin-top: 14px;
+        padding: 13px;
+        border: 1px solid #dce5f1;
+        border-radius: 12px;
+        background: #fff;
+      }
+      .rd-schedule-v2-day-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+      }
+      .rd-schedule-v2-day-card {
+        display: grid;
+        gap: 5px;
+        min-width: 0;
+        padding: 13px;
+        border: 1px solid #e2e8f0;
+        border-radius: 10px;
+        background: #f8fafc;
+      }
+      .rd-schedule-v2-day-number {
+        color: #1d4ed8;
+        font-size: 11px;
+        font-weight: 800;
+      }
+      .rd-schedule-v2-day-station {
+        color: #173b70;
+        font-size: 13px;
+        overflow-wrap: anywhere;
+      }
+      .rd-schedule-v2-day-time,
+      .rd-schedule-v2-day-count {
+        color: #64748b;
+        font-size: 11px;
+      }
+      .rd-schedule-v2-day-arrow {
+        color: #2563eb;
+        font-size: 16px;
+        font-weight: 800;
+      }
+      .rd-schedule-v2-stop-halt {
+        border-left: 3px solid #16a34a;
+        padding-left: 9px;
+      }
+      .rd-schedule-v2-halt-badge {
+        display: inline-block;
+        margin-top: 5px;
+        padding: 3px 7px;
+        border-radius: 5px;
+        background: #dcfce7;
+        color: #166534;
+        font-size: 10px;
+        font-weight: 800;
+      }
       @media(max-width:600px) { .rd-schedule-v2-grid{gap:7px}.rd-schedule-v2-card{padding:10px}.rd-schedule-v2-platform{max-width:85px} }
     `;
     document.head.appendChild(style);
@@ -3573,6 +3914,7 @@ function renderCompactScheduleV2(payload, panel) {
     metrics.appendChild(card);
   });
 
+  rdScheduleV2RenderJourneyOverview(train, route, panel);
   panel.appendChild(metrics);
 
   const runDays = train.runDays ?? train.run_days ??
@@ -3648,6 +3990,7 @@ function renderCompactScheduleV2(payload, panel) {
   }
 
   panel.appendChild(daysSection);
+  rdScheduleV2RenderDayTimeline(route, panel);
 
   const routeSection = document.createElement("section");
   routeSection.className = "rd-schedule-v2-route";
@@ -3717,38 +4060,571 @@ function renderCompactScheduleV2(payload, panel) {
 }
 
 
+
+const rdDashboardStyle = document.createElement("style");
+rdDashboardStyle.textContent = `
+  .rd-dashboard {
+    margin: 32px 0;
+    padding: 22px;
+    border: 1px solid #dce5f1;
+    border-radius: 18px;
+    background: #f5f8fd;
+    scroll-margin-top: 24px;
+  }
+  .rd-dashboard-summary {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+    margin: 18px 0;
+  }
+  .rd-dashboard-stat {
+    background: #fff;
+    border: 1px solid #e1e7f0;
+    border-radius: 12px;
+    padding: 15px;
+  }
+  .rd-dashboard-stat strong {
+    display: block;
+    font-size: 23px;
+    color: #173b70;
+  }
+  .rd-dashboard-stat span {
+    display: block;
+    margin-top: 4px;
+    color: #65748b;
+    font-size: 12px;
+  }
+  .rd-dashboard-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+  }
+  .rd-dashboard-card {
+    min-width: 0;
+    padding: 17px;
+    border: 1px solid #e1e7f0;
+    border-radius: 13px;
+    background: #fff;
+  }
+  .rd-dashboard-card-wide {
+    grid-column: 1 / -1;
+  }
+  .rd-dashboard-card-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+  .rd-dashboard-card-heading h4 {
+    margin: 0;
+    color: #183b69;
+  }
+  .rd-dashboard-entry {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 12px 0;
+    border-bottom: 1px solid #edf1f6;
+  }
+  .rd-dashboard-entry:last-child {
+    border-bottom: 0;
+  }
+  .rd-dashboard-entry-main {
+    min-width: 0;
+  }
+  .rd-dashboard-entry-main strong {
+    display: block;
+    overflow-wrap: anywhere;
+    color: #1d3557;
+    font-size: 14px;
+  }
+  .rd-dashboard-entry-main span {
+    display: block;
+    margin-top: 4px;
+    color: #65748b;
+    font-size: 12px;
+  }
+  .rd-dashboard-entry-actions,
+  .rd-dashboard-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 7px;
+  }
+  .rd-dashboard-button {
+    border: 1px solid #cbd7e7;
+    border-radius: 8px;
+    padding: 8px 11px;
+    background: #fff;
+    color: #24466f;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 600;
+  }
+  .rd-dashboard-button:hover {
+    background: #edf4ff;
+  }
+  .rd-dashboard-button-primary {
+    border-color: #2456a6;
+    background: #2456a6;
+    color: #fff;
+  }
+  .rd-dashboard-button-primary:hover {
+    background: #183f80;
+    color: #fff;
+  }
+  .rd-dashboard-empty {
+    margin: 8px 0;
+    color: #718096;
+    font-size: 13px;
+  }
+  .rd-dashboard-privacy {
+    margin: 15px 0 0;
+    color: #718096;
+    font-size: 12px;
+  }
+  @media(max-width:700px) {
+    .rd-dashboard-grid {
+      grid-template-columns: 1fr;
+    }
+    .rd-dashboard-card-wide {
+      grid-column: auto;
+    }
+  }
+  @media(max-width:480px) {
+    .rd-dashboard {
+      padding: 14px;
+    }
+    .rd-dashboard-summary {
+      gap: 7px;
+    }
+    .rd-dashboard-stat {
+      padding: 10px;
+    }
+    .rd-dashboard-stat strong {
+      font-size: 19px;
+    }
+    .rd-dashboard-entry {
+      align-items: flex-start;
+      flex-direction: column;
+    }
+  }
+`;
+document.head.appendChild(rdDashboardStyle);
+
+const rdDashboardKeys = {
+  favourites: "raildarpan_favourite_trains_v1",
+  recent: "raildarpan_recent_trains_v1",
+  stations: "raildarpan_saved_stations_v1"
+};
+
+function rdReadDashboardList(key) {
+  try {
+    const value = JSON.parse(localStorage.getItem(key) || "[]");
+    return Array.isArray(value) ? value : [];
+  } catch {
+    return [];
+  }
+}
+
+function rdWriteDashboardList(key, items) {
+  try {
+    localStorage.setItem(key, JSON.stringify(items));
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function rdGetTrainIdentity(data) {
+  const number = String(input.value || "").trim();
+
+  if (!/^\d{1,10}$/.test(number)) return null;
+
+  const root = data && data.data !== undefined ? data.data : data;
+  const queue = [{ value: root, depth: 0 }];
+  let name = "";
+
+  while (queue.length) {
+    const current = queue.shift();
+    const obj = current.value;
+
+    if (!obj || typeof obj !== "object" || current.depth > 5) continue;
+
+    if (Array.isArray(obj)) {
+      obj.slice(0, 30).forEach(value => {
+        queue.push({ value, depth: current.depth + 1 });
+      });
+      continue;
+    }
+
+    const possibleNumber =
+      obj.number ??
+      obj.trainNumber ??
+      obj.train_number ??
+      obj.trainNo ??
+      obj.train_no;
+
+    const possibleName =
+      obj.name ??
+      obj.trainName ??
+      obj.train_name;
+
+    if (
+      possibleNumber !== undefined &&
+      String(possibleNumber) === number &&
+      typeof possibleName === "string" &&
+      possibleName.trim()
+    ) {
+      name = possibleName.trim();
+      break;
+    }
+
+    [
+      "train",
+      "trainDetails",
+      "train_details",
+      "trainInfo",
+      "train_info",
+      "details",
+      "result",
+      "data"
+    ].forEach(key => {
+      if (obj[key] && typeof obj[key] === "object") {
+        queue.push({ value: obj[key], depth: current.depth + 1 });
+      }
+    });
+  }
+
+  return {
+    number,
+    name: name || `Train ${number}`,
+    mode: currentMode,
+    savedAt: new Date().toISOString()
+  };
+}
+
+function rdSaveRecentTrain(train) {
+  const items = rdReadDashboardList(rdDashboardKeys.recent)
+    .filter(item => String(item.number) !== train.number);
+
+  items.unshift(train);
+  rdWriteDashboardList(rdDashboardKeys.recent, items.slice(0, 15));
+  rdRenderDashboard();
+}
+
+function rdIsFavouriteTrain(number) {
+  return rdReadDashboardList(rdDashboardKeys.favourites)
+    .some(item => String(item.number) === String(number));
+}
+
+function rdToggleFavouriteTrain(train) {
+  const items = rdReadDashboardList(rdDashboardKeys.favourites);
+  const exists = items.some(item => String(item.number) === train.number);
+
+  const updated = exists
+    ? items.filter(item => String(item.number) !== train.number)
+    : [{ ...train, savedAt: new Date().toISOString() }, ...items].slice(0, 25);
+
+  if (!rdWriteDashboardList(rdDashboardKeys.favourites, updated)) {
+    alert("Could not save this favourite. Check your browser storage.");
+    return;
+  }
+
+  rdRenderDashboard();
+}
+
+function rdIsSavedStation(code) {
+  return rdReadDashboardList(rdDashboardKeys.stations)
+    .some(item => String(item.code).toUpperCase() === String(code).toUpperCase());
+}
+
+function rdToggleSavedStation(station) {
+  const code = String(station.code || "").trim().toUpperCase();
+  if (!code) return;
+
+  const items = rdReadDashboardList(rdDashboardKeys.stations);
+  const exists = items.some(item => String(item.code).toUpperCase() === code);
+
+  const updated = exists
+    ? items.filter(item => String(item.code).toUpperCase() !== code)
+    : [{
+        code,
+        name: station.name || code,
+        city: station.city || "",
+        savedAt: new Date().toISOString()
+      }, ...items].slice(0, 30);
+
+  if (!rdWriteDashboardList(rdDashboardKeys.stations, updated)) {
+    alert("Could not save this station. Check your browser storage.");
+    return;
+  }
+
+  rdRenderDashboard();
+}
+
+function rdDashboardButton(label, callback, primary = false) {
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = primary
+    ? "rd-dashboard-button rd-dashboard-button-primary"
+    : "rd-dashboard-button";
+  button.textContent = label;
+  button.addEventListener("click", callback);
+  return button;
+}
+
+function rdDashboardEntry(container, title, subtitle, buttons) {
+  const row = document.createElement("div");
+  row.className = "rd-dashboard-entry";
+
+  const main = document.createElement("div");
+  main.className = "rd-dashboard-entry-main";
+
+  const strong = document.createElement("strong");
+  strong.textContent = title;
+  main.appendChild(strong);
+
+  const small = document.createElement("span");
+  small.textContent = subtitle;
+  main.appendChild(small);
+
+  row.appendChild(main);
+
+  const actions = document.createElement("div");
+  actions.className = "rd-dashboard-entry-actions";
+  buttons.forEach(button => actions.appendChild(button));
+  row.appendChild(actions);
+
+  container.appendChild(row);
+}
+
+function rdOpenTrain(item, mode = "live") {
+  const selectedMode = mode === "schedule" ? "schedule" : "live";
+  selectMode(selectedMode);
+  input.value = String(item.number || "");
+
+  document.getElementById("search").scrollIntoView({
+    behavior: "smooth",
+    block: "start"
+  });
+
+  form.requestSubmit();
+}
+
+function rdOpenSavedStation(station) {
+  const codeInput = document.getElementById("stationCode");
+  const liveForm = document.getElementById("stationLiveForm");
+
+  if (!codeInput || !liveForm) return;
+
+  codeInput.value = station.code;
+
+  document.getElementById("station-tools").scrollIntoView({
+    behavior: "smooth",
+    block: "start"
+  });
+
+  liveForm.requestSubmit();
+}
+
+function rdRenderDashboard() {
+  const summary = document.getElementById("rdDashboardSummary");
+  const favourites = document.getElementById("rdFavouriteTrains");
+  const recent = document.getElementById("rdRecentTrains");
+  const stations = document.getElementById("rdSavedStations");
+
+  if (!summary || !favourites || !recent || !stations) return;
+
+  const favouriteItems = rdReadDashboardList(rdDashboardKeys.favourites);
+  const recentItems = rdReadDashboardList(rdDashboardKeys.recent);
+  const stationItems = rdReadDashboardList(rdDashboardKeys.stations);
+
+  summary.replaceChildren();
+
+  [
+    ["Favourite trains", favouriteItems.length],
+    ["Saved stations", stationItems.length],
+    ["Recent searches", recentItems.length]
+  ].forEach(([label, count]) => {
+    const box = document.createElement("div");
+    box.className = "rd-dashboard-stat";
+
+    const strong = document.createElement("strong");
+    strong.textContent = String(count);
+    box.appendChild(strong);
+
+    const span = document.createElement("span");
+    span.textContent = label;
+    box.appendChild(span);
+
+    summary.appendChild(box);
+  });
+
+  favourites.replaceChildren();
+  recent.replaceChildren();
+  stations.replaceChildren();
+
+  if (!favouriteItems.length) {
+    const empty = document.createElement("p");
+    empty.className = "rd-dashboard-empty";
+    empty.textContent = "No favourite trains yet. Save a train from its result.";
+    favourites.appendChild(empty);
+  }
+
+  favouriteItems.forEach(item => {
+    rdDashboardEntry(
+      favourites,
+      item.name || `Train ${item.number}`,
+      `Train number: ${item.number}`,
+      [
+        rdDashboardButton("Live Status", () => rdOpenTrain(item, "live"), true),
+        rdDashboardButton("Schedule", () => rdOpenTrain(item, "schedule")),
+        rdDashboardButton("Remove", () => {
+          rdWriteDashboardList(
+            rdDashboardKeys.favourites,
+            rdReadDashboardList(rdDashboardKeys.favourites)
+              .filter(row => String(row.number) !== String(item.number))
+          );
+          rdRenderDashboard();
+        })
+      ]
+    );
+  });
+
+  if (!stationItems.length) {
+    const empty = document.createElement("p");
+    empty.className = "rd-dashboard-empty";
+    empty.textContent = "No saved stations yet. Save a station from Station Search.";
+    stations.appendChild(empty);
+  }
+
+  stationItems.forEach(item => {
+    rdDashboardEntry(
+      stations,
+      item.name || item.code,
+      `${item.code}${item.city ? " · " + item.city : ""}`,
+      [
+        rdDashboardButton("Station Status", () => rdOpenSavedStation(item), true),
+        rdDashboardButton("Remove", () => {
+          rdWriteDashboardList(
+            rdDashboardKeys.stations,
+            rdReadDashboardList(rdDashboardKeys.stations)
+              .filter(row => String(row.code).toUpperCase() !== String(item.code).toUpperCase())
+          );
+          rdRenderDashboard();
+        })
+      ]
+    );
+  });
+
+  if (!recentItems.length) {
+    const empty = document.createElement("p");
+    empty.className = "rd-dashboard-empty";
+    empty.textContent = "Your successful train searches will appear here.";
+    recent.appendChild(empty);
+  }
+
+  recentItems.forEach(item => {
+    const date = item.savedAt ? new Date(item.savedAt) : null;
+    const dateText = date && !Number.isNaN(date.getTime())
+      ? `Searched: ${date.toLocaleString("en-IN")}`
+      : `Train number: ${item.number}`;
+
+    rdDashboardEntry(
+      recent,
+      item.name || `Train ${item.number}`,
+      `${item.number} · ${dateText}`,
+      [
+        rdDashboardButton("Search Again", () => rdOpenTrain(item, item.mode), true)
+      ]
+    );
+  });
+}
+
+function rdAddTrainFavouriteControl(panel, train) {
+  if (!train) return;
+
+  const actions = document.createElement("div");
+  actions.className = "rd-dashboard-actions";
+  actions.style.marginTop = "16px";
+
+  const button = rdDashboardButton(
+    rdIsFavouriteTrain(train.number) ? "Remove from Favourites" : "Add to Favourites",
+    () => {
+      rdToggleFavouriteTrain(train);
+      button.textContent = rdIsFavouriteTrain(train.number)
+        ? "Remove from Favourites"
+        : "Add to Favourites";
+    },
+    true
+  );
+
+  actions.appendChild(button);
+  panel.appendChild(actions);
+}
+
+rdRenderDashboard();
+
+const rdClearRecentButton = document.getElementById("rdClearRecent");
+
+if (rdClearRecentButton) {
+  rdClearRecentButton.addEventListener("click", () => {
+    if (!confirm("Clear all recent train searches from this browser?")) return;
+    rdWriteDashboardList(rdDashboardKeys.recent, []);
+    rdRenderDashboard();
+  });
+}
+
 function renderResult(data) {
   result.replaceChildren();
 
   const panel = document.createElement("section");
   panel.className = "result-panel";
+
   addText(panel, "h4", currentMode === "pnr"
     ? "PNR Result"
     : currentMode === "live" ? "Live Train Result" : "Train Schedule");
 
   if (data && data.success === false) {
-    addText(panel, "p", data.message || data.error || "The provider could not retrieve the data.", "result-error");
+    addText(
+      panel,
+      "p",
+      data.message || data.error || "The provider could not retrieve the data.",
+      "result-error"
+    );
     result.appendChild(panel);
     return;
   }
 
   const payload = data && data.data !== undefined ? data.data : data;
 
+  const trainIdentity =
+    currentMode === "live" || currentMode === "schedule"
+      ? rdGetTrainIdentity(data)
+      : null;
+
+  if (trainIdentity) rdSaveRecentTrain(trainIdentity);
 
   if (currentMode === "live") {
     renderCompactLiveStatus(data, payload, panel);
   } else if (currentMode === "schedule") {
     renderCompactScheduleV2(payload, panel);
   } else {
-    addText(panel, "p", "Response received from the railway data service.", "result-success");
+    addText(
+      panel,
+      "p",
+      "Response received from the railway data service.",
+      "result-success"
+    );
     renderObject(payload, panel);
   }
 
-
-
+  rdAddTrainFavouriteControl(panel, trainIdentity);
   result.appendChild(panel);
 }
-
 const officialPnrUrl = atob("aHR0cHM6Ly93d3cuaW5kaWFucmFpbC5nb3YuaW4vZW5xdWlyeS9QTlIvUG5yRW5xdWlyeS5odG1sP2xvY2FsZT1lbg==");
 
 const pnrHistoryKey = "raildarpan_pnr_history";
@@ -3868,6 +4744,7 @@ form.addEventListener("submit", async event => {
     }
 
     renderResult(data);
+    rdShowProviderCacheNotice(result, response);
   } catch (error) {
     result.replaceChildren();
     addText(result, "p", error.message || "Unable to retrieve railway information.", "result-error");
@@ -3889,6 +4766,401 @@ function stationMessage(container, message, className = "") {
   p.textContent = message;
   if (className) p.className = className;
   container.appendChild(p);
+}
+
+
+function rdShowProviderCacheNotice(container, response) {
+  if (!container) return;
+
+  const existing = container.querySelector("#rdProviderCacheNotice");
+  if (existing) existing.remove();
+}
+
+
+const rdBetweenStyle = document.createElement("style");
+rdBetweenStyle.textContent = `
+  .rd-between-panel {
+    margin: 0 0 26px;
+    padding: 20px;
+    border: 1px solid #dce5f1;
+    border-radius: 16px;
+    background: #f6f9ff;
+  }
+  .rd-between-panel .section-heading {
+    margin-bottom: 16px;
+  }
+  .rd-between-panel .search-form {
+    align-items: end;
+  }
+  .rd-between-train {
+    margin-top: 12px;
+    padding: 16px;
+    border: 1px solid #e1e7f0;
+    border-radius: 12px;
+    background: #fff;
+  }
+  .rd-between-train h4 {
+    margin: 0 0 5px;
+    color: #183b69;
+  }
+  .rd-between-train p {
+    margin: 5px 0;
+  }
+  .rd-between-train-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 12px;
+  }
+  .rd-between-train-actions button {
+    border-radius: 8px;
+    padding: 9px 12px;
+    cursor: pointer;
+  }
+  @media(max-width:600px) {
+    .rd-between-panel {
+      padding: 14px;
+    }
+  }
+`;
+document.head.appendChild(rdBetweenStyle);
+
+
+function rdBetweenText(value) {
+  if (value === undefined || value === null || value === "") return "";
+  if (typeof value === "string" || typeof value === "number") {
+    return String(value);
+  }
+  return "";
+}
+
+function rdBetweenTrainInfo(row) {
+  if (!row || typeof row !== "object") return null;
+
+  const nested =
+    row.train && typeof row.train === "object"
+      ? row.train
+      : row.trainDetails && typeof row.trainDetails === "object"
+        ? row.trainDetails
+        : row;
+
+  const from = row.from && typeof row.from === "object" ? row.from : {};
+  const to = row.to && typeof row.to === "object" ? row.to : {};
+
+  const objects = [nested, row, from, to];
+
+  function pick(keys) {
+    for (const obj of objects) {
+      for (const key of keys) {
+        const value = obj[key];
+
+        if (Array.isArray(value) && value.length) {
+          return value.map(item => String(item)).join(", ");
+        }
+
+        const text = rdBetweenText(value);
+        if (text) return text;
+      }
+    }
+    return "";
+  }
+
+  const number = pick([
+    "number", "trainNumber", "train_number", "trainNo", "train_no"
+  ]);
+
+  if (!number) return null;
+
+  const durationRaw = pick([
+    "duration", "journeyDuration", "journey_duration"
+  ]);
+
+  const durationMinutes = Number(durationRaw);
+  const duration = durationRaw && Number.isFinite(durationMinutes)
+    ? `${Math.floor(durationMinutes / 60)}h ${durationMinutes % 60}m`
+    : durationRaw;
+
+  const daysRaw = nested.runDays || nested.run_days || nested.daysOfRun;
+  const days = Array.isArray(daysRaw)
+    ? daysRaw.map(day => String(day).slice(0, 1).toUpperCase() +
+        String(day).slice(1, 3)).join(", ")
+    : rdBetweenText(daysRaw);
+
+  return {
+    number,
+    name: pick(["name", "trainName", "train_name"]) || `Train ${number}`,
+    fromName: rdBetweenText(from.name),
+    fromCode: rdBetweenText(from.code),
+    toName: rdBetweenText(to.name),
+    toCode: rdBetweenText(to.code),
+    departure: rdBetweenText(from.departure) || pick([
+      "departure", "departureTime", "departure_time",
+      "fromTime", "from_time", "sourceDeparture", "source_departure"
+    ]),
+    arrival: rdBetweenText(to.arrival) || pick([
+      "arrival", "arrivalTime", "arrival_time",
+      "toTime", "to_time", "destinationArrival", "destination_arrival"
+    ]),
+    duration,
+    distance: pick(["distance"]),
+    halts: pick(["totalHaltsBetween", "total_halts_between", "halts"]),
+    type: pick(["type", "trainType", "train_type"]),
+    days
+  };
+}
+function rdBetweenFindTrainRows(value, depth = 0) {
+  if (depth > 7 || value === null || value === undefined) return null;
+
+  if (Array.isArray(value)) {
+    const matches = value
+      .map(row => ({ row, info: rdBetweenTrainInfo(row) }))
+      .filter(item => item.info);
+
+    if (matches.length) return matches.map(item => item.row);
+    if (!value.length) return [];
+
+    for (const child of value.slice(0, 30)) {
+      const found = rdBetweenFindTrainRows(child, depth + 1);
+      if (found !== null) return found;
+    }
+
+    return null;
+  }
+
+  if (typeof value === "object") {
+    const preferredKeys = [
+      "trains",
+      "results",
+      "data",
+      "availableTrains",
+      "available_trains",
+      "trainList",
+      "train_list",
+      "items",
+      "betweenTrains",
+      "between_trains"
+    ];
+
+    for (const key of preferredKeys) {
+      if (value[key] !== undefined) {
+        const found = rdBetweenFindTrainRows(value[key], depth + 1);
+        if (found !== null) return found;
+      }
+    }
+
+    for (const key of Object.keys(value).slice(0, 20)) {
+      if (preferredKeys.includes(key)) continue;
+
+      const child = value[key];
+
+      if (child && typeof child === "object") {
+        const found = rdBetweenFindTrainRows(child, depth + 1);
+        if (found !== null) return found;
+      }
+    }
+  }
+
+  return null;
+}
+
+const rdBetweenForm = document.getElementById("rdBetweenForm");
+const rdBetweenResults = document.getElementById("rdBetweenResults");
+const rdBetweenDate = document.getElementById("rdBetweenDate");
+
+if (rdBetweenDate && !rdBetweenDate.value) {
+  const localDate = new Date();
+  localDate.setMinutes(
+    localDate.getMinutes() - localDate.getTimezoneOffset()
+  );
+  rdBetweenDate.value = localDate.toISOString().slice(0, 10);
+}
+
+if (rdBetweenForm) {
+  rdBetweenForm.addEventListener("submit", async event => {
+    event.preventDefault();
+
+    const from = document.getElementById("rdBetweenFrom")
+      .value.trim().toUpperCase();
+
+    const to = document.getElementById("rdBetweenTo")
+      .value.trim().toUpperCase();
+
+    const date = rdBetweenDate.value;
+    const button = document.getElementById("rdBetweenSearchButton");
+
+    if (!/^[A-Z0-9]{2,10}$/.test(from) ||
+        !/^[A-Z0-9]{2,10}$/.test(to)) {
+      stationMessage(
+        rdBetweenResults,
+        "Enter valid station codes, such as NDLS and MMCT.",
+        "result-error"
+      );
+      return;
+    }
+
+    if (from === to) {
+      stationMessage(
+        rdBetweenResults,
+        "From and To stations must be different.",
+        "result-error"
+      );
+      return;
+    }
+
+    if (!date) {
+      stationMessage(
+        rdBetweenResults,
+        "Please select your journey date.",
+        "result-error"
+      );
+      return;
+    }
+
+    button.disabled = true;
+    button.textContent = "Searching…";
+    stationMessage(rdBetweenResults, "Finding trains between stations…");
+
+    try {
+      const params = new URLSearchParams({ from, to, date });
+      const response = await fetch(
+        `/api/trains/between?${params.toString()}`
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          data.error || data.message || "Train search failed."
+        );
+      }
+
+      const payload = data.data !== undefined ? data.data : data;
+      const rows = rdBetweenFindTrainRows(payload);
+
+      const panel = document.createElement("section");
+      panel.className = "result-panel";
+
+      addText(
+        panel,
+        "h4",
+        `Trains: ${from} → ${to}`,
+        "result-value"
+      );
+
+      addText(
+        panel,
+        "p",
+        `Journey date: ${date}`,
+        "result-label"
+      );
+
+      if (rows && rows.length === 0) {
+        addText(
+          panel,
+          "p",
+          "No trains were returned for this station pair and date.",
+          "result-label"
+        );
+      } else if (rows && rows.length) {
+        addText(
+          panel,
+          "p",
+          `${rows.length} train result${rows.length === 1 ? "" : "s"} received.`,
+          "result-success"
+        );
+
+        rows.forEach(row => {
+          const info = rdBetweenTrainInfo(row);
+          if (!info) return;
+
+          const card = document.createElement("article");
+          card.className = "rd-between-train";
+
+          addText(card, "h4", info.name);
+          addText(card, "p", `Train No. ${info.number}`, "result-label");
+
+          if (info.fromName || info.toName) {
+            const fromLabel = info.fromName
+              ? `${info.fromName}${info.fromCode ? ` (${info.fromCode})` : ""}`
+              : info.fromCode;
+
+            const toLabel = info.toName
+              ? `${info.toName}${info.toCode ? ` (${info.toCode})` : ""}`
+              : info.toCode;
+
+            addText(
+              card,
+              "p",
+              `Route: ${fromLabel || "Source"} → ${toLabel || "Destination"}`,
+              "result-label"
+            );
+          }
+
+          const details = [];
+
+          if (info.departure) details.push(`Departure: ${info.departure}`);
+          if (info.arrival) details.push(`Arrival: ${info.arrival}`);
+          if (info.duration) details.push(`Duration: ${info.duration}`);
+          if (info.distance) details.push(`Distance: ${info.distance} km`);
+          if (info.halts) details.push(`Halts: ${info.halts}`);
+          if (info.type) details.push(`Type: ${info.type}`);
+
+          if (details.length) {
+            addText(card, "p", details.join(" · "), "result-label");
+          }
+
+          if (info.days) {
+            addText(card, "p", `Runs: ${info.days}`, "result-label");
+          }
+
+          const actions = document.createElement("div");
+          actions.className = "rd-between-train-actions";
+
+          const liveButton = document.createElement("button");
+          liveButton.type = "button";
+          liveButton.className = "primary";
+          liveButton.textContent = "Live Status";
+          liveButton.addEventListener("click", () => {
+            rdOpenTrain({ number: info.number }, "live");
+          });
+
+          const scheduleButton = document.createElement("button");
+          scheduleButton.type = "button";
+          scheduleButton.className = "primary";
+          scheduleButton.textContent = "Train Schedule";
+          scheduleButton.addEventListener("click", () => {
+            rdOpenTrain({ number: info.number }, "schedule");
+          });
+
+          actions.appendChild(liveButton);
+          actions.appendChild(scheduleButton);
+          card.appendChild(actions);
+          panel.appendChild(card);
+        });
+      } else {
+        addText(
+          panel,
+          "p",
+          "The provider returned data, but its train-list structure was not recognised. The response is shown below for review.",
+          "result-label"
+        );
+        renderObject(payload, panel);
+      }
+
+      rdBetweenResults.replaceChildren(panel);
+      rdShowProviderCacheNotice(rdBetweenResults, response);
+
+    } catch (error) {
+      stationMessage(
+        rdBetweenResults,
+        error.message || "Unable to find trains between these stations.",
+        "result-error"
+      );
+    } finally {
+      button.disabled = false;
+      button.textContent = "Find Trains →";
+    }
+  });
 }
 
 function renderStationSearch(data) {
@@ -3938,6 +5210,23 @@ function renderStationSearch(data) {
     });
 
     card.appendChild(button);
+
+    const saveButton = document.createElement("button");
+    saveButton.type = "button";
+    saveButton.className = "primary";
+    saveButton.style.marginTop = "8px";
+    saveButton.textContent = rdIsSavedStation(code)
+      ? "Remove Saved Station"
+      : "Save Station";
+
+    saveButton.addEventListener("click", () => {
+      rdToggleSavedStation({ code, name, city });
+      saveButton.textContent = rdIsSavedStation(code)
+        ? "Remove Saved Station"
+        : "Save Station";
+    });
+
+    card.appendChild(saveButton);
     grid.appendChild(card);
   });
 
@@ -3967,6 +5256,7 @@ stationSearchForm.addEventListener("submit", async event => {
     }
 
     renderStationSearch(data);
+    rdShowProviderCacheNotice(stationResults, response);
   } catch (error) {
     stationMessage(stationResults, error.message, "result-error");
   }
@@ -4212,6 +5502,311 @@ function renderStationFriendlyV2(payload, panel) {
 
 }
 
+
+const rdStationBoardStyle = document.createElement("style");
+rdStationBoardStyle.textContent = `
+  .rd-live-board {
+    margin-top: 18px;
+  }
+  .rd-live-board-summary {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    justify-content: space-between;
+    padding: 13px 15px;
+    margin-bottom: 16px;
+    border-radius: 10px;
+    background: #edf4ff;
+    color: #24466f;
+    font-size: 13px;
+  }
+  .rd-live-board-columns {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+  }
+  .rd-live-board-section {
+    min-width: 0;
+    border: 1px solid #dce5f1;
+    border-radius: 12px;
+    padding: 13px;
+    background: #fff;
+  }
+  .rd-live-board-section h5 {
+    margin: 0 0 12px;
+    color: #183b69;
+    font-size: 16px;
+  }
+  .rd-live-board-list {
+    display: grid;
+    gap: 9px;
+  }
+  .rd-live-board-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1.5fr) repeat(4, minmax(0, 1fr));
+    gap: 8px;
+    align-items: center;
+    padding: 11px;
+    border: 1px solid #e7edf5;
+    border-radius: 9px;
+    background: #fbfdff;
+  }
+  .rd-live-board-train {
+    min-width: 0;
+  }
+  .rd-live-board-train strong {
+    display: block;
+    color: #173b70;
+    font-size: 13px;
+    overflow-wrap: anywhere;
+  }
+  .rd-live-board-train span {
+    display: block;
+    margin-top: 4px;
+    color: #65748b;
+    font-size: 11px;
+    overflow-wrap: anywhere;
+  }
+  .rd-live-board-cell {
+    min-width: 0;
+  }
+  .rd-live-board-cell span {
+    display: block;
+    color: #718096;
+    font-size: 10px;
+    margin-bottom: 4px;
+  }
+  .rd-live-board-cell strong {
+    display: block;
+    color: #263c59;
+    font-size: 12px;
+    overflow-wrap: anywhere;
+  }
+  .rd-live-board-status {
+    color: #166534 !important;
+  }
+  .rd-live-board-empty {
+    padding: 13px;
+    margin: 0;
+    border-radius: 9px;
+    background: #f7f9fc;
+    color: #65748b;
+    font-size: 13px;
+  }
+  @media(max-width:850px) {
+    .rd-live-board-columns {
+      grid-template-columns: 1fr;
+    }
+  }
+  @media(max-width:540px) {
+    .rd-live-board-row {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    .rd-live-board-train {
+      grid-column: 1 / -1;
+    }
+    .rd-live-board-cell strong {
+      font-size: 13px;
+    }
+  }
+`;
+document.head.appendChild(rdStationBoardStyle);
+
+function rdStationBoardText(value) {
+  if (value === undefined || value === null || value === "") return "";
+  if (typeof value === "object") {
+    return value.name || value.code || "";
+  }
+  return String(value);
+}
+
+function rdStationBoardTime(value) {
+  if (!value) return "—";
+
+  const raw = String(value);
+  if (/T\d{2}:\d{2}/.test(raw)) {
+    const date = new Date(raw);
+    if (!Number.isNaN(date.getTime())) {
+      return date.toLocaleString("en-IN", {
+        day: "2-digit",
+        month: "short",
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: true
+      });
+    }
+  }
+
+  const match = raw.match(/\b\d{1,2}:\d{2}\b/);
+  return match ? match[0] : raw;
+}
+
+function rdStationBoardStatus(live) {
+  const parts = [];
+  const type = rdStationBoardText(live.type || live.status);
+
+  if (type) {
+    parts.push(type.replace(/[-_]+/g, " ").replace(/\b\w/g, c => c.toUpperCase()));
+  }
+
+  const delayValue = live.delayMinutes ?? live.delay_min;
+
+  if (delayValue !== undefined && delayValue !== null &&
+      delayValue !== "" && Number.isFinite(Number(delayValue))) {
+    const delay = Number(delayValue);
+
+    if (delay === 0) parts.push("On time");
+    else if (delay > 0) parts.push(`${delay} min late`);
+    else parts.push(`${Math.abs(delay)} min early`);
+  }
+
+  return parts.length ? parts.join(" · ") : "—";
+}
+
+function renderStationBoardV1(payload, panel, meta) {
+  const data = payload && payload.data !== undefined ? payload.data : payload;
+  const trains = data && Array.isArray(data.trains) ? data.trains : null;
+
+  if (!trains) {
+    renderStationBoardV1(payload, panel, data.meta);
+    return;
+  }
+
+  const arrivals = [];
+  const departures = [];
+
+  trains.forEach(row => {
+    if (!row || typeof row !== "object") return;
+
+    const train = row.train && typeof row.train === "object"
+      ? row.train
+      : {};
+
+    const stop = row.stop && typeof row.stop === "object"
+      ? row.stop
+      : {};
+
+    const live = row.live && typeof row.live === "object"
+      ? row.live
+      : {};
+
+    const info = {
+      number: rdStationBoardText(train.number || train.trainNumber || train.train_number),
+      name: rdStationBoardText(train.name || train.trainName || train.train_name),
+      route: [
+        rdStationBoardText(train.source),
+        rdStationBoardText(train.destination)
+      ].filter(Boolean).join(" → "),
+      platform: rdStationBoardText(stop.platform) || "—",
+      status: rdStationBoardStatus(live),
+      arrivalScheduled: rdStationBoardTime(stop.arrival),
+      arrivalExpected: rdStationBoardTime(live.expectedArrivalTime),
+      departureScheduled: rdStationBoardTime(stop.departure),
+      departureExpected: rdStationBoardTime(live.expectedDepartureTime)
+    };
+
+    if (!info.number) return;
+
+    if (stop.arrival || live.expectedArrivalTime) arrivals.push(info);
+    if (stop.departure || live.expectedDepartureTime) departures.push(info);
+  });
+
+  addText(panel, "h4", "Live Station Board", "result-value");
+
+  const summary = document.createElement("div");
+  summary.className = "rd-live-board-summary";
+
+  addText(summary, "strong", `${trains.length} trains received`);
+  addText(summary, "span", `${arrivals.length} arrivals`);
+  addText(summary, "span", `${departures.length} departures`);
+
+  if (meta && meta.timestamp) {
+    const updated = new Date(meta.timestamp);
+    addText(
+      summary,
+      "span",
+      Number.isNaN(updated.getTime())
+        ? `Provider update: ${meta.timestamp}`
+        : `Provider update: ${updated.toLocaleString("en-IN")}`
+    );
+  }
+
+  panel.appendChild(summary);
+
+  const columns = document.createElement("div");
+  columns.className = "rd-live-board-columns";
+
+  function makeBoardSection(title, items, direction) {
+    const section = document.createElement("section");
+    section.className = "rd-live-board-section";
+
+    addText(section, "h5", `${title} · ${items.length}`);
+
+    const list = document.createElement("div");
+    list.className = "rd-live-board-list";
+
+    if (!items.length) {
+      addText(
+        list,
+        "p",
+        `No ${title.toLowerCase()} timings were returned for this station.`,
+        "rd-live-board-empty"
+      );
+    }
+
+    items.forEach(item => {
+      const row = document.createElement("article");
+      row.className = "rd-live-board-row";
+
+      const trainBox = document.createElement("div");
+      trainBox.className = "rd-live-board-train";
+
+      addText(trainBox, "strong", `${item.number} · ${item.name || "Train"}`);
+      if (item.route) addText(trainBox, "span", item.route);
+
+      row.appendChild(trainBox);
+
+      const scheduled = direction === "arrival"
+        ? item.arrivalScheduled
+        : item.departureScheduled;
+
+      const expected = direction === "arrival"
+        ? item.arrivalExpected
+        : item.departureExpected;
+
+      [
+        ["Scheduled", scheduled],
+        ["Expected", expected],
+        ["Platform", item.platform],
+        ["Status / Delay", item.status]
+      ].forEach(([label, value], index) => {
+        const cell = document.createElement("div");
+        cell.className = "rd-live-board-cell";
+
+        addText(cell, "span", label);
+        addText(
+          cell,
+          "strong",
+          value || "—",
+          index === 3 ? "rd-live-board-status" : ""
+        );
+
+        row.appendChild(cell);
+      });
+
+      list.appendChild(row);
+    });
+
+    section.appendChild(list);
+    columns.appendChild(section);
+  }
+
+  makeBoardSection("Arrivals", arrivals, "arrival");
+  makeBoardSection("Departures", departures, "departure");
+
+  panel.appendChild(columns);
+}
+
 stationLiveForm.addEventListener("submit", async event => {
   event.preventDefault();
 
@@ -4256,10 +5851,1405 @@ stationLiveForm.addEventListener("submit", async event => {
     renderStationFriendlyV2(payload, panel);
 
     stationLiveResults.appendChild(panel);
+    rdShowProviderCacheNotice(stationLiveResults, response);
   } catch (error) {
     stationMessage(stationLiveResults, error.message, "result-error");
   }
 });
+
+
+
+const rdAlertsStyle = document.createElement("style");
+rdAlertsStyle.textContent = `
+  .rd-alerts-centre {
+    scroll-margin-top: 25px;
+  }
+  .rd-alerts-summary-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 9px;
+    margin-top: 10px;
+  }
+  .rd-alert-summary-item {
+    min-width: 0;
+    padding: 10px;
+    border: 1px solid #dce5f1;
+    border-radius: 9px;
+    background: #fff;
+  }
+  .rd-alert-summary-item strong {
+    display: block;
+    color: #173b70;
+    font-size: 19px;
+  }
+  .rd-alert-summary-item span {
+    color: #64748b;
+    font-size: 10px;
+  }
+  .rd-alert-card {
+    min-width: 0;
+    padding: 15px;
+    border: 1px solid #dce5f1;
+    border-left: 4px solid #2456a6;
+    border-radius: 11px;
+    background: #fff;
+  }
+  .rd-alert-card h4 {
+    margin: 8px 0;
+    color: #173b70;
+    font-size: 15px;
+    overflow-wrap: anywhere;
+  }
+  .rd-alert-card p {
+    font-size: 12px;
+    line-height: 1.6;
+    color: #52647a;
+  }
+  .rd-alert-category {
+    display: inline-block;
+    padding: 5px 8px;
+    border-radius: 6px;
+    background: #eaf1fb;
+    color: #24466f;
+    font-size: 10px;
+    font-weight: 800;
+  }
+  .rd-alert-source-label {
+    display: block;
+    margin-top: 8px;
+    color: #166534;
+    font-size: 10px;
+    font-weight: 700;
+  }
+  .rd-alert-feed {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+  }
+  .rd-alert-empty {
+    grid-column: 1 / -1;
+    padding: 16px;
+    border-radius: 10px;
+    background: #fff;
+    color: #64748b;
+    font-size: 13px;
+  }
+  .rd-alert-link {
+    display: inline-block;
+    margin-top: 8px;
+    color: #2456a6;
+    font-size: 12px;
+    font-weight: 700;
+  }
+  @media(max-width:650px) {
+    .rd-alert-feed {
+      grid-template-columns: 1fr;
+    }
+    .rd-alert-summary-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+`;
+document.head.appendChild(rdAlertsStyle);
+
+const rdAlertLabels = {
+  all: "All",
+  cancellation: "Cancellations",
+  diversion: "Diversions",
+  rescheduling: "Rescheduling",
+  block: "Traffic / Power Blocks",
+  other: "Other Notices"
+};
+
+let rdAlertOperationalItems = [];
+let rdAlertPibItems = [];
+let rdAlertFilter = "all";
+let rdAlertLoadState = "loading";
+let rdAlertLoadError = "";
+let rdAlertUpdatedAt = "";
+
+function rdAlertCategoryFromType(value) {
+  const type = String(value || "").toUpperCase().replace(/[\s-]+/g, "_");
+
+  if (
+    type.includes("CANCEL") ||
+    type === "PARTIAL_SOURCE" ||
+    type === "PARTIAL_DESTINATION"
+  ) return "cancellation";
+
+  if (type.includes("DIVERT")) return "diversion";
+  if (type.includes("RESCHEDULE")) return "rescheduling";
+  if (/BLOCK/.test(type)) return "block";
+  return type ? "other" : null;
+}
+
+function rdAlertFormatDate(value) {
+  if (!value) return "Not provided";
+
+  const date = new Date(value);
+
+  return Number.isNaN(date.getTime())
+    ? String(value)
+    : date.toLocaleString("en-IN", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit"
+      });
+}
+
+function rdAlertOperationalEntries(data) {
+  const root = data && data.data !== undefined ? data.data : data;
+  const trains = Array.isArray(root && root.trains) ? root.trains : [];
+  const entries = [];
+  const seen = new Set();
+
+  trains.forEach(train => {
+    if (!train || typeof train !== "object") return;
+
+    let exceptions = Array.isArray(train.exceptions)
+      ? train.exceptions
+      : [];
+
+    if (!exceptions.length) {
+      exceptions = [{
+        type: train.primaryType || train.status,
+        message: train.message
+      }];
+    }
+
+    function addException(exception) {
+      if (!exception) return;
+
+      if (typeof exception === "string") {
+        exception = { type: exception };
+      }
+
+      if (typeof exception !== "object") return;
+
+      const nested = exception.multipleExceptions;
+
+      if (Array.isArray(nested)) {
+        nested.forEach(addException);
+        return;
+      }
+
+      if (nested && typeof nested === "object") {
+        Object.values(nested).forEach(addException);
+        return;
+      }
+
+      const type = exception.type || train.primaryType || train.status;
+      const category = rdAlertCategoryFromType(type);
+
+      if (!category) return;
+
+      const number = String(
+        train.trainNumber || train.number || train.train_number || ""
+      );
+
+      const startDate = train.startDate || train.start_date || "";
+      const key = `${number}:${startDate}:${category}`;
+
+      if (seen.has(key)) return;
+      seen.add(key);
+
+      const source = train.sourceStation || {};
+      const destination = train.destinationStation || {};
+
+      entries.push({
+        sourceType: "railradar",
+        category,
+        type: String(type),
+        trainNumber: number,
+        trainName: train.trainName || train.name || `Train ${number}`,
+        trainType: train.trainType || "",
+        startDate,
+        sourceName: train.sourceStationName || source.name || train.sourceStationCode || "",
+        sourceCode: train.sourceStationCode || source.code || "",
+        destinationName: train.destinationStationName || destination.name || train.destinationStationCode || "",
+        destinationCode: train.destinationStationCode || destination.code || "",
+        message: exception.message || train.message || "",
+        lastUpdatedAt: train.lastUpdatedAt || train.last_updated_at || ""
+      });
+    }
+
+    exceptions.forEach(addException);
+  });
+
+  return entries;
+}
+
+/* RAIL DARPAN: SEARCH-BASED TRAIN DISRUPTION CENTRE */
+
+let rdAlertSearchQuery = "";
+let rdAlertSearchMessage = "";
+
+function rdUpdatePibAlerts() {
+  // General PIB news is intentionally excluded from train disruption search.
+  rdAlertPibItems = [];
+}
+
+const rdAlertSearchStyle = document.createElement("style");
+rdAlertSearchStyle.textContent = `
+  #rdAlertsSummary,
+  #rdAlertFilters {
+    display: none !important;
+  }
+
+  #rdAlertsCentre .rd-alerts-heading p {
+    display: none !important;
+  }
+
+  #rdAlertFeed.rd-alert-feed {
+    display: block !important;
+    width: 100%;
+  }
+
+  .rd-train-search-panel {
+    width: 100%;
+    box-sizing: border-box;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px;
+    padding: 20px;
+    margin: 16px 0;
+    border: 1px solid rgba(100, 150, 220, .25);
+    border-radius: 16px;
+    background: linear-gradient(135deg, rgba(24, 48, 82, .08), rgba(35, 115, 190, .08));
+  }
+
+  .rd-train-search-input {
+    flex: 1 1 260px;
+    min-width: 0;
+    box-sizing: border-box;
+    padding: 15px 16px;
+    border: 1px solid rgba(120, 150, 190, .45);
+    border-radius: 10px;
+    background: var(--card-bg, #fff);
+    color: var(--text-color, #182338);
+    font-size: 16px;
+    outline: none;
+  }
+
+  .rd-train-search-input:focus {
+    border-color: #2684df;
+    box-shadow: 0 0 0 3px rgba(38, 132, 223, .13);
+  }
+
+  .rd-train-search-button {
+    padding: 15px 24px;
+    border: 0;
+    border-radius: 10px;
+    background: #1769bd;
+    color: #fff;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+
+  .rd-train-search-button:hover {
+    background: #10569e;
+  }
+
+  .rd-train-search-hint {
+    flex: 1 1 100%;
+    margin: 0;
+    color: var(--muted, #64748b);
+    font-size: 13px;
+  }
+
+  .rd-train-search-result {
+    display: grid;
+    gap: 14px;
+    margin-top: 16px;
+  }
+
+  .rd-train-result-card {
+    padding: 20px;
+    border: 1px solid rgba(120, 150, 190, .25);
+    border-radius: 14px;
+    background: var(--card-bg, #fff);
+    color: var(--text-color, #182338);
+    box-shadow: 0 5px 20px rgba(0, 0, 0, .045);
+  }
+
+  .rd-train-result-top {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+
+  .rd-train-result-name {
+    margin: 0 0 5px;
+    font-size: 19px;
+    font-weight: 750;
+  }
+
+  .rd-train-result-number {
+    color: var(--muted, #64748b);
+    font-size: 13px;
+  }
+
+  .rd-train-status {
+    display: inline-block;
+    padding: 7px 11px;
+    border-radius: 20px;
+    background: #fff0e8;
+    color: #b54708;
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: .3px;
+  }
+
+  .rd-train-result-route {
+    margin: 12px 0;
+    font-size: 14px;
+    font-weight: 650;
+  }
+
+  .rd-train-result-message {
+    margin: 12px 0;
+    padding: 12px;
+    border-radius: 9px;
+    background: rgba(120, 150, 190, .09);
+    line-height: 1.6;
+    overflow-wrap: anywhere;
+  }
+
+  .rd-train-result-meta {
+    color: var(--muted, #64748b);
+    font-size: 12px;
+    line-height: 1.7;
+  }
+
+  .rd-train-search-notice {
+    padding: 16px;
+    border-radius: 12px;
+    background: rgba(120, 150, 190, .09);
+    color: var(--text-color, #334155);
+    line-height: 1.65;
+  }
+
+  .rd-train-search-notice strong {
+    display: block;
+    margin-bottom: 5px;
+  }
+
+  .rd-train-search-notice a {
+    display: inline-block;
+    margin-top: 8px;
+    color: #1672c8;
+    font-weight: 700;
+  }
+
+  .rd-train-provider-note {
+    margin-top: 16px;
+    color: var(--muted, #64748b);
+    font-size: 12px;
+    line-height: 1.6;
+  }
+
+  @media(max-width: 600px) {
+    .rd-train-search-panel {
+      padding: 14px;
+    }
+
+    .rd-train-search-button {
+      width: 100%;
+    }
+
+    .rd-train-result-card {
+      padding: 15px;
+    }
+  }
+`;
+document.head.appendChild(rdAlertSearchStyle);
+
+/* NOVA / RAIL DARPAN - NTES STYLE TRAIN RESULT */
+
+let rdNtesQuery = "";
+let rdNtesJourneyDate = "";
+let rdNtesLoading = false;
+let rdNtesError = "";
+let rdNtesCandidates = [];
+let rdNtesLiveData = null;
+let rdNtesMeta = null;
+let rdNtesRequestId = 0;
+
+function rdNtesToday() {
+  const parts = new Intl.DateTimeFormat("en-IN", {
+    timeZone: "Asia/Kolkata",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit"
+  }).formatToParts(new Date());
+
+  const get = type => parts.find(part => part.type === type)?.value || "";
+  return `${get("year")}-${get("month")}-${get("day")}`;
+}
+
+if (!rdNtesJourneyDate) {
+  rdNtesJourneyDate = rdNtesToday();
+}
+
+const rdNtesStyle = document.createElement("style");
+
+rdNtesStyle.textContent = `
+  #rdAlertsSummary,
+  #rdAlertFilters {
+    display: none !important;
+  }
+
+  #rdAlertFeed {
+    display: block !important;
+    width: 100%;
+  }
+
+  .rd-ntes-search {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 190px auto;
+    gap: 12px;
+    padding: 18px;
+    margin: 16px 0;
+    border: 1px solid rgba(100, 150, 220, .25);
+    border-radius: 14px;
+    background: rgba(35, 115, 190, .06);
+  }
+
+  .rd-ntes-search input {
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+    padding: 14px;
+    border: 1px solid rgba(120, 150, 190, .45);
+    border-radius: 9px;
+    background: var(--card-bg, #fff);
+    color: var(--text-color, #182338);
+    font-size: 15px;
+  }
+
+  .rd-ntes-search button {
+    padding: 13px 20px;
+    border: 0;
+    border-radius: 9px;
+    background: #1769bd;
+    color: white;
+    font-weight: 750;
+    cursor: pointer;
+  }
+
+  .rd-ntes-search button:hover {
+    background: #10569e;
+  }
+
+  .rd-ntes-search-help {
+    grid-column: 1 / -1;
+    margin: 0;
+    color: var(--muted, #64748b);
+    font-size: 12px;
+  }
+
+  .rd-ntes-panel {
+    display: grid;
+    gap: 15px;
+    margin-top: 16px;
+  }
+
+  .rd-ntes-train-head,
+  .rd-ntes-status-card,
+  .rd-ntes-issue,
+  .rd-ntes-info-card,
+  .rd-ntes-stations-card {
+    padding: 18px;
+    border: 1px solid rgba(120, 150, 190, .23);
+    border-radius: 13px;
+    background: var(--card-bg, #fff);
+    color: var(--text-color, #182338);
+    box-shadow: 0 4px 16px rgba(0,0,0,.035);
+  }
+
+  .rd-ntes-train-title {
+    margin: 0 0 6px;
+    font-size: 20px;
+    font-weight: 800;
+  }
+
+  .rd-ntes-muted {
+    color: var(--muted, #64748b);
+    font-size: 12px;
+    line-height: 1.65;
+  }
+
+  .rd-ntes-route-title {
+    margin-top: 12px;
+    font-size: 15px;
+    font-weight: 750;
+  }
+
+  .rd-ntes-status-card {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    border-left: 5px solid #2684df;
+  }
+
+  .rd-ntes-status-card.is-issue {
+    border-left-color: #dc4242;
+    background: rgba(220, 66, 66, .055);
+  }
+
+  .rd-ntes-status-label {
+    display: inline-block;
+    padding: 8px 12px;
+    border-radius: 25px;
+    background: rgba(38, 132, 223, .12);
+    color: #1769bd;
+    font-size: 13px;
+    font-weight: 850;
+  }
+
+  .rd-ntes-status-card.is-issue .rd-ntes-status-label {
+    background: rgba(220, 66, 66, .13);
+    color: #c52f2f;
+  }
+
+  .rd-ntes-info-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .rd-ntes-info-card small {
+    display: block;
+    margin-bottom: 6px;
+    color: var(--muted, #64748b);
+    font-size: 11px;
+  }
+
+  .rd-ntes-info-card strong {
+    display: block;
+    font-size: 14px;
+    overflow-wrap: anywhere;
+  }
+
+  .rd-ntes-issue {
+    border-left: 5px solid #dc4242;
+    background: rgba(220, 66, 66, .055);
+  }
+
+  .rd-ntes-issue h4 {
+    margin: 0 0 10px;
+    color: #c52f2f;
+  }
+
+  .rd-ntes-issue-item {
+    padding: 10px 0;
+    border-top: 1px solid rgba(180, 100, 100, .18);
+    line-height: 1.6;
+  }
+
+  .rd-ntes-section-title {
+    margin: 0 0 14px;
+    font-size: 17px;
+    font-weight: 800;
+  }
+
+  .rd-ntes-table-wrap {
+    width: 100%;
+    overflow-x: auto;
+  }
+
+  .rd-ntes-table {
+    width: 100%;
+    min-width: 700px;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+
+  .rd-ntes-table th {
+    padding: 12px 10px;
+    text-align: left;
+    white-space: nowrap;
+    background: rgba(90, 130, 180, .10);
+    color: var(--text-color, #182338);
+  }
+
+  .rd-ntes-table td {
+    padding: 12px 10px;
+    border-bottom: 1px solid rgba(120, 150, 190, .18);
+    vertical-align: middle;
+  }
+
+  .rd-ntes-table tr.is-current {
+    background: rgba(38, 132, 223, .085);
+  }
+
+  .rd-ntes-station-name {
+    display: block;
+    font-weight: 750;
+  }
+
+  .rd-ntes-station-code {
+    display: block;
+    margin-top: 3px;
+    color: var(--muted, #64748b);
+    font-size: 11px;
+  }
+
+  .rd-ntes-time-main {
+    display: block;
+    font-weight: 750;
+    white-space: nowrap;
+  }
+
+  .rd-ntes-time-label {
+    display: block;
+    margin-top: 3px;
+    color: var(--muted, #64748b);
+    font-size: 10px;
+  }
+
+  .rd-ntes-candidates {
+    display: grid;
+    gap: 8px;
+  }
+
+  .rd-ntes-candidate {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    width: 100%;
+    padding: 13px;
+    border: 1px solid rgba(120, 150, 190, .25);
+    border-radius: 9px;
+    background: var(--card-bg, #fff);
+    color: var(--text-color, #182338);
+    text-align: left;
+    cursor: pointer;
+  }
+
+  .rd-ntes-candidate:hover {
+    border-color: #2684df;
+  }
+
+  .rd-ntes-note {
+    padding: 14px;
+    border-radius: 10px;
+    background: rgba(120, 150, 190, .09);
+    line-height: 1.65;
+    font-size: 13px;
+  }
+
+  .rd-ntes-note a {
+    color: #1672c8;
+    font-weight: 750;
+  }
+
+  .rd-ntes-provider {
+    margin-top: 4px;
+    color: var(--muted, #64748b);
+    font-size: 11px;
+    line-height: 1.65;
+  }
+
+  @media(max-width: 700px) {
+    .rd-ntes-search {
+      grid-template-columns: 1fr;
+      padding: 13px;
+    }
+
+    .rd-ntes-search-help {
+      grid-column: auto;
+    }
+
+    .rd-ntes-info-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .rd-ntes-train-head,
+    .rd-ntes-status-card,
+    .rd-ntes-issue,
+    .rd-ntes-info-card,
+    .rd-ntes-stations-card {
+      padding: 14px;
+    }
+  }
+`;
+
+document.head.appendChild(rdNtesStyle);
+
+function rdNtesElement(tag, className, value) {
+  const element = document.createElement(tag);
+  if (className) element.className = className;
+  if (value !== undefined && value !== null) {
+    element.textContent = String(value);
+  }
+  return element;
+}
+
+async function rdNtesRequest(url) {
+  const response = await fetch(url, {
+    headers: { Accept: "application/json" }
+  });
+
+  const payload = await response.json().catch(() => ({}));
+
+  if (!response.ok || payload.success === false) {
+    let message = payload.error || payload.message || "";
+
+    if (message && typeof message === "object") {
+      message = message.message || message.code || "";
+    }
+
+    throw new Error(message || `Request failed (${response.status})`);
+  }
+
+  return payload;
+}
+
+function rdNtesFormatDateTime(value) {
+  if (!value) return "—";
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return String(value);
+
+  const time = date.toLocaleTimeString("en-IN", {
+    timeZone: "Asia/Kolkata",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false
+  });
+
+  const day = date.toLocaleDateString("en-IN", {
+    timeZone: "Asia/Kolkata",
+    day: "2-digit",
+    month: "short"
+  });
+
+  return `${time} ${day}`;
+}
+
+function rdNtesFlattenExceptions(source) {
+  const result = [];
+
+  function add(value) {
+    if (!value) return;
+
+    if (Array.isArray(value)) {
+      value.forEach(add);
+      return;
+    }
+
+    if (typeof value === "string") {
+      result.push({ type: value, message: "" });
+      return;
+    }
+
+    if (typeof value !== "object") return;
+
+    const nested = value.multipleExceptions;
+
+    if (Array.isArray(nested)) {
+      nested.forEach(add);
+      return;
+    }
+
+    if (nested && typeof nested === "object") {
+      Object.values(nested).forEach(add);
+      return;
+    }
+
+    result.push({
+      type: String(value.type || value.primaryType || "Disruption notice"),
+      message: String(value.message || value.description || "")
+    });
+  }
+
+  add(source);
+  return result;
+}
+
+function rdNtesDisruptionLabel(exceptions, status) {
+  const types = exceptions.map(item => String(item.type || "").toUpperCase());
+  const combined = [...types, String(status || "").toUpperCase()].join(" ");
+
+  if (combined.includes("PARTIALLY_CANCELLED") ||
+      combined.includes("PARTIAL_SOURCE") ||
+      combined.includes("PARTIAL_DESTINATION")) {
+    return "Partially Cancelled";
+  }
+
+  if (combined.includes("CANCEL")) return "Cancelled";
+  if (combined.includes("DIVERT")) return "Diverted";
+  if (combined.includes("RESCHEDULE")) return "Rescheduled";
+
+  const normalized = String(status || "").toLowerCase();
+
+  if (normalized === "not-started") return "Yet to start from its source";
+  if (normalized === "running") return "Running";
+  if (normalized === "completed" || normalized === "arrived") {
+    return "Reached destination";
+  }
+  if (normalized === "cancelled" || normalized === "canceled") {
+    return "Cancelled";
+  }
+
+  return normalized
+    ? normalized.replace(/[_-]+/g, " ").replace(/\b\w/g, c => c.toUpperCase())
+    : "Status unavailable";
+}
+
+function rdNtesBuildTimeCell(station, kind) {
+  const actual = station[`actual${kind}`];
+  const scheduled = station[`scheduled${kind}`];
+
+  const isObserved =
+    Boolean(actual) && station.provenance === "observed";
+
+  const isPredicted =
+    Boolean(actual) && station.provenance === "predicted";
+
+  const shown = isObserved || isPredicted
+    ? actual
+    : scheduled || actual;
+
+  const cell = document.createElement("td");
+  cell.appendChild(
+    rdNtesElement("span", "rd-ntes-time-main", rdNtesFormatDateTime(shown))
+  );
+
+  let label = "Scheduled";
+  if (isObserved) label = "Actual";
+  else if (isPredicted) label = "Expected";
+
+  cell.appendChild(
+    rdNtesElement("span", "rd-ntes-time-label", shown ? label : "")
+  );
+
+  return cell;
+}
+
+function rdNtesDelayText(station) {
+  const values = [
+    station.delayArrival,
+    station.delayDeparture
+  ].filter(value => value !== undefined && value !== null);
+
+  if (!values.length) return "—";
+
+  const delay = Number(values[0]);
+  if (!Number.isFinite(delay)) return "—";
+
+  const prefix = station.provenance === "predicted" ? "Expected " : "";
+
+  if (delay === 0) return prefix + "On Time";
+  if (delay > 0) return `${prefix}${delay} min late`;
+  return `${prefix}${Math.abs(delay)} min early`;
+}
+
+function rdNtesRenderLive(data, meta, container) {
+  const train = data.train || {};
+  const source = train.source || {};
+  const destination = train.destination || {};
+  const exceptions = rdNtesFlattenExceptions(data.exceptions);
+  const label = rdNtesDisruptionLabel(exceptions, data.status);
+
+  const statusNormalized = String(data.status || "").toLowerCase();
+  const isIssue =
+    exceptions.length > 0 ||
+    /cancel|divert|resched/.test(statusNormalized);
+
+  const panel = rdNtesElement("div", "rd-ntes-panel");
+
+  const head = rdNtesElement("section", "rd-ntes-train-head");
+  head.appendChild(
+    rdNtesElement(
+      "h4",
+      "rd-ntes-train-title",
+      `${data.trainNumber || train.number || ""} ${data.trainName || train.name || ""}`.trim()
+    )
+  );
+
+  head.appendChild(
+    rdNtesElement(
+      "div",
+      "rd-ntes-muted",
+      `${train.type || "Train"}${train.category ? " · " + train.category : ""}`
+    )
+  );
+
+  head.appendChild(
+    rdNtesElement(
+      "div",
+      "rd-ntes-route-title",
+      `${source.name || "Source"} (${source.code || "—"})  →  ${destination.name || "Destination"} (${destination.code || "—"})`
+    )
+  );
+
+  head.appendChild(
+    rdNtesElement(
+      "div",
+      "rd-ntes-muted",
+      `Journey date: ${data.startDate || rdNtesJourneyDate} · Distance: ${train.distance ?? "—"} km · Scheduled duration: ${train.duration ? Math.floor(train.duration / 60) + "h " + (train.duration % 60) + "m" : "—"}`
+    )
+  );
+
+  panel.appendChild(head);
+
+  const statusCard = rdNtesElement(
+    "section",
+    `rd-ntes-status-card${isIssue ? " is-issue" : ""}`
+  );
+
+  const statusInfo = document.createElement("div");
+  statusInfo.appendChild(
+    rdNtesElement("div", "rd-ntes-muted", "TRAIN STATUS")
+  );
+  statusInfo.appendChild(
+    rdNtesElement("div", "rd-ntes-status-label", label)
+  );
+
+  statusCard.appendChild(statusInfo);
+
+  const delay = Number(data.delayMinutes);
+  let delayText = "Not available";
+
+  if (Number.isFinite(delay)) {
+    if (statusNormalized === "not-started") {
+      delayText = "Scheduled run";
+    } else if (delay === 0) {
+      delayText = "On Time";
+    } else if (delay > 0) {
+      delayText = `${delay} minutes late`;
+    } else {
+      delayText = `${Math.abs(delay)} minutes early`;
+    }
+  }
+
+  const statusMeta = document.createElement("div");
+  statusMeta.appendChild(
+    rdNtesElement("div", "rd-ntes-muted", `Delay: ${delayText}`)
+  );
+  statusMeta.appendChild(
+    rdNtesElement(
+      "div",
+      "rd-ntes-muted",
+      `Last updated: ${rdNtesFormatDateTime(data.lastUpdatedAt || meta.timestamp)}`
+    )
+  );
+
+  statusCard.appendChild(statusMeta);
+  panel.appendChild(statusCard);
+
+  if (exceptions.length) {
+    const issueCard = rdNtesElement("section", "rd-ntes-issue");
+    issueCard.appendChild(
+      rdNtesElement("h4", "", "Train disruption information")
+    );
+
+    exceptions.forEach(exception => {
+      const item = rdNtesElement("div", "rd-ntes-issue-item");
+
+      item.appendChild(
+        rdNtesElement(
+          "strong",
+          "",
+          rdNtesDisruptionLabel([exception], exception.type)
+        )
+      );
+
+      if (exception.message) {
+        item.appendChild(
+          rdNtesElement("div", "", exception.message)
+        );
+      }
+
+      issueCard.appendChild(item);
+    });
+
+    panel.appendChild(issueCard);
+  } else if (!isIssue) {
+    const normalNotice = rdNtesElement(
+      "div",
+      "rd-ntes-note",
+      "No disruption exception is currently reported for this journey date. Train running status and timetable are shown below. Please verify critical journey information on official NTES before travel."
+    );
+    panel.appendChild(normalNotice);
+  }
+
+  const current = data.currentLocation || {};
+  const next = data.nextHalt || {};
+
+  const infoGrid = rdNtesElement("section", "rd-ntes-info-grid");
+
+  const infoItems = [
+    ["Current location", current.stationName
+      ? `${current.stationName} (${current.stationCode || "—"})`
+      : (statusNormalized === "not-started" ? "Yet to start" : "Not available")],
+    ["Next halt", next.stationName
+      ? `${next.stationName} (${next.stationCode || "—"})`
+      : "Not available"],
+    ["Tracking mode", data.trackingMode || "Not available"]
+  ];
+
+  infoItems.forEach(([heading, value]) => {
+    const card = rdNtesElement("div", "rd-ntes-info-card");
+    card.appendChild(rdNtesElement("small", "", heading));
+    card.appendChild(rdNtesElement("strong", "", value));
+    infoGrid.appendChild(card);
+  });
+
+  panel.appendChild(infoGrid);
+
+  const route = Array.isArray(data.route) ? data.route : [];
+  const haltStations = route.filter(station => station && station.isHalt === true);
+  const stations = haltStations.length ? haltStations : route;
+
+  const stationsCard = rdNtesElement("section", "rd-ntes-stations-card");
+  stationsCard.appendChild(
+    rdNtesElement(
+      "h4",
+      "rd-ntes-section-title",
+      `Train route & station timings (${stations.length} stations)`
+    )
+  );
+
+  if (!stations.length) {
+    stationsCard.appendChild(
+      rdNtesElement(
+        "div",
+        "rd-ntes-note",
+        "Station-wise timetable is not available for this train/date."
+      )
+    );
+  } else {
+    const wrap = rdNtesElement("div", "rd-ntes-table-wrap");
+    const table = rdNtesElement("table", "rd-ntes-table");
+
+    const thead = document.createElement("thead");
+    const headingRow = document.createElement("tr");
+
+    ["Station", "Arrival", "Departure", "Delay", "Platform", "Status"]
+      .forEach(title => {
+        headingRow.appendChild(rdNtesElement("th", "", title));
+      });
+
+    thead.appendChild(headingRow);
+    table.appendChild(thead);
+
+    const tbody = document.createElement("tbody");
+
+    stations.forEach(station => {
+      const row = document.createElement("tr");
+
+      const isCurrent =
+        current.stationCode &&
+        current.stationCode === station.stationCode;
+
+      if (isCurrent) row.className = "is-current";
+
+      const stationCell = document.createElement("td");
+      stationCell.appendChild(
+        rdNtesElement(
+          "span",
+          "rd-ntes-station-name",
+          station.stationName || "Station"
+        )
+      );
+      stationCell.appendChild(
+        rdNtesElement(
+          "span",
+          "rd-ntes-station-code",
+          `${station.stationCode || "—"} · ${station.distance ?? "—"} km`
+        )
+      );
+
+      row.appendChild(stationCell);
+      row.appendChild(rdNtesBuildTimeCell(station, "Arrival"));
+      row.appendChild(rdNtesBuildTimeCell(station, "Departure"));
+      row.appendChild(
+        rdNtesElement("td", "", rdNtesDelayText(station))
+      );
+      row.appendChild(
+        rdNtesElement("td", "", station.platform || "—")
+      );
+
+      const statusText = String(station.status || "—")
+        .replace(/[_-]+/g, " ");
+
+      row.appendChild(
+        rdNtesElement(
+          "td",
+          "",
+          statusText.replace(/\b\w/g, char => char.toUpperCase())
+        )
+      );
+
+      tbody.appendChild(row);
+    });
+
+    table.appendChild(tbody);
+    wrap.appendChild(table);
+    stationsCard.appendChild(wrap);
+  }
+
+  panel.appendChild(stationsCard);
+
+
+
+  container.appendChild(panel);
+}
+
+async function rdNtesLoadLive(trainNumber, date, requestId) {
+  if (requestId !== rdNtesRequestId) return;
+
+  rdNtesLoading = true;
+  rdNtesError = "";
+  rdNtesCandidates = [];
+  rdNtesLiveData = null;
+  rdNtesMeta = null;
+  rdNtesRender();
+
+  try {
+    const url =
+      `/api/train/${encodeURIComponent(trainNumber)}/live` +
+      `?date=${encodeURIComponent(date)}`;
+
+    const payload = await rdNtesRequest(url);
+
+    if (requestId !== rdNtesRequestId) return;
+
+    rdNtesLiveData = payload.data || payload;
+    rdNtesMeta = payload.meta || {};
+    rdNtesLoading = false;
+    rdNtesError = "";
+    rdNtesRender();
+
+  } catch (error) {
+    if (requestId !== rdNtesRequestId) return;
+
+    rdNtesLoading = false;
+    rdNtesError = error.message || "Unable to load train status.";
+    rdNtesRender();
+  }
+}
+
+async function rdNtesRunSearch(query, date) {
+  rdNtesQuery = String(query || "").trim();
+  rdNtesJourneyDate = date || rdNtesToday();
+
+  if (!rdNtesQuery) {
+    rdNtesError = "Enter a train number or train name.";
+    rdNtesRender();
+    return;
+  }
+
+  const requestId = ++rdNtesRequestId;
+
+  rdNtesLoading = true;
+  rdNtesError = "";
+  rdNtesCandidates = [];
+  rdNtesLiveData = null;
+  rdNtesMeta = null;
+  rdNtesRender();
+
+  try {
+    const url =
+      `/api/train/search?q=${encodeURIComponent(rdNtesQuery)}&limit=10`;
+
+    const payload = await rdNtesRequest(url);
+
+    if (requestId !== rdNtesRequestId) return;
+
+    const candidates = Array.isArray(payload.data) ? payload.data : [];
+
+    if (!candidates.length) {
+      rdNtesLoading = false;
+      rdNtesError = "No matching train was found. Check the train number or name.";
+      rdNtesRender();
+      return;
+    }
+
+    const numericQuery = rdNtesQuery.replace(/\D/g, "");
+    const exact = candidates.find(item =>
+      String(item.number || item.trainNumber || "").replace(/\D/g, "") === numericQuery
+    );
+
+    if (exact) {
+      const number = exact.number || exact.trainNumber;
+      await rdNtesLoadLive(number, rdNtesJourneyDate, requestId);
+      return;
+    }
+
+    if (candidates.length === 1) {
+      const number = candidates[0].number || candidates[0].trainNumber;
+      await rdNtesLoadLive(number, rdNtesJourneyDate, requestId);
+      return;
+    }
+
+    rdNtesLoading = false;
+    rdNtesCandidates = candidates;
+    rdNtesRender();
+
+  } catch (error) {
+    if (requestId !== rdNtesRequestId) return;
+
+    rdNtesLoading = false;
+    rdNtesError = error.message || "Train search failed.";
+    rdNtesRender();
+  }
+}
+
+function rdNtesRender() {
+  const feed = document.getElementById("rdAlertFeed");
+  if (!feed) return;
+
+  const summary = document.getElementById("rdAlertsSummary");
+  const filters = document.getElementById("rdAlertFilters");
+
+  if (summary) summary.style.display = "none";
+  if (filters) filters.style.display = "none";
+
+  const description = document.querySelector(
+    "#rdAlertsCentre .rd-alerts-heading p"
+  );
+
+  if (description) description.remove();
+
+  feed.replaceChildren();
+
+  const form = document.createElement("form");
+  form.className = "rd-ntes-search";
+
+  const searchInput = document.createElement("input");
+  searchInput.type = "search";
+  searchInput.placeholder = "Train number or train name";
+  searchInput.setAttribute("aria-label", "Train number or train name");
+  searchInput.autocomplete = "off";
+  searchInput.required = true;
+  searchInput.value = rdNtesQuery;
+
+  const dateInput = document.createElement("input");
+  dateInput.type = "date";
+  dateInput.setAttribute("aria-label", "Journey start date");
+  dateInput.value = rdNtesJourneyDate || rdNtesToday();
+
+  const button = document.createElement("button");
+  button.type = "submit";
+  button.textContent = "Search Train";
+
+  const help = rdNtesElement(
+    "p",
+    "rd-ntes-search-help",
+    "Train number ya name enter karein. Journey ki start date select karke Search Train dabayein."
+  );
+
+  form.append(searchInput, dateInput, button, help);
+
+  form.addEventListener("submit", event => {
+    event.preventDefault();
+    rdNtesRunSearch(searchInput.value, dateInput.value);
+  });
+
+  feed.appendChild(form);
+
+  const results = document.createElement("div");
+  results.className = "rd-ntes-panel";
+  results.setAttribute("aria-live", "polite");
+  feed.appendChild(results);
+
+  if (rdNtesLoading) {
+    results.appendChild(
+      rdNtesElement(
+        "div",
+        "rd-ntes-note",
+        "Train details aur live running status load ho raha hai..."
+      )
+    );
+    return;
+  }
+
+  if (rdNtesError) {
+    results.appendChild(
+      rdNtesElement("div", "rd-ntes-note", rdNtesError)
+    );
+  }
+
+  if (rdNtesCandidates.length) {
+    results.appendChild(
+      rdNtesElement(
+        "h4",
+        "rd-ntes-section-title",
+        "Select the matching train"
+      )
+    );
+
+    const candidatesBox = rdNtesElement("div", "rd-ntes-candidates");
+
+    rdNtesCandidates.forEach(candidate => {
+      const number = candidate.number || candidate.trainNumber || "";
+      const name = candidate.name || candidate.trainName || "Train";
+      const source = candidate.sourceName || candidate.source || "";
+      const destination =
+        candidate.destName || candidate.destination || candidate.dest || "";
+
+      const candidateButton = rdNtesElement("button", "rd-ntes-candidate");
+      candidateButton.type = "button";
+      candidateButton.appendChild(
+        rdNtesElement("strong", "", `${number} · ${name}`)
+      );
+      candidateButton.appendChild(
+        rdNtesElement(
+          "span",
+          "rd-ntes-muted",
+          `${source} → ${destination}`
+        )
+      );
+
+      candidateButton.addEventListener("click", () => {
+        const requestId = ++rdNtesRequestId;
+        rdNtesError = "";
+        rdNtesCandidates = [];
+        rdNtesLoadLive(number, rdNtesJourneyDate, requestId);
+      });
+
+      candidatesBox.appendChild(candidateButton);
+    });
+
+    results.appendChild(candidatesBox);
+    return;
+  }
+
+  if (rdNtesLiveData) {
+    rdNtesRenderLive(rdNtesLiveData, rdNtesMeta || {}, results);
+    return;
+  }
+
+  if (!rdNtesQuery && !rdNtesError) {
+    results.appendChild(
+      rdNtesElement(
+        "div",
+        "rd-ntes-note",
+        "Train search karke uska running status, disruption information aur station-wise timetable dekhein."
+      )
+    );
+  }
+}
+
+rdRenderRailwayAlerts = rdNtesRender;
+rdNtesRender();
+
+/* END NTES STYLE TRAIN SEARCH */
 
 
 async function loadRailwayNews({ silent = false } = {}) {
@@ -4313,6 +7303,7 @@ async function loadRailwayNews({ silent = false } = {}) {
     }
 
     const items = Array.isArray(result.items) ? result.items : [];
+    rdUpdatePibAlerts(items);
 
     if (items.length === 0) {
       if (!hadExistingCards) {
@@ -4385,6 +7376,7 @@ async function loadRailwayNews({ silent = false } = {}) {
     });
 
     container.replaceChildren(fragment);
+    rdShowProviderCacheNotice(section, response);
     loadRailwayNews.lastSuccessAt = Date.now();
 
     status.textContent =
@@ -4400,7 +7392,7 @@ async function loadRailwayNews({ silent = false } = {}) {
     if (!hadExistingCards) {
       const message = document.createElement("p");
       message.textContent =
-        "Official news is temporarily unavailable. The site will retry automatically.";
+        "Official railway news is temporarily unavailable. Check your connection or try again later.";
       message.className = "result-error";
       container.replaceChildren(message);
     } else {

@@ -5,6 +5,14 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#071b35">
+
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="icon" type="image/png" sizes="32x32" href="/icons/favicon-32.png">
+  <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Rail Darpan">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="mobile-web-app-capable" content="yes">
   <meta name="description" content="Rail Darpan — Indian Railways PNR status, live train running status, train schedules and railway updates.">
   <title>Rail Darpan — Indian Railways Companion</title>
   <style>
@@ -1874,6 +1882,45 @@ footer a,
   }
 }
 
+
+/* RAIL DARPAN WHITE LOGO BACKGROUND V1 */
+
+.brand .logo {
+  background: #ffffff !important;
+  background-image: none !important;
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 14px !important;
+  padding: 3px !important;
+  overflow: hidden !important;
+  box-shadow: 0 3px 12px rgba(15, 23, 42, .12) !important;
+}
+
+.brand .logo img {
+  background: #ffffff !important;
+  object-fit: contain !important;
+  object-position: center !important;
+  border-radius: 10px !important;
+}
+
+
+/* RAIL DARPAN OFFICIAL LOGO REINSTALLED */
+.brand .logo {
+  background: #ffffff !important;
+  background-image: none !important;
+  border: 1px solid #e2e8f0 !important;
+  padding: 3px !important;
+  overflow: hidden !important;
+}
+
+.brand .logo img {
+  display: block !important;
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: contain !important;
+  object-position: center !important;
+  background: #ffffff !important;
+}
+
 </style>
 
 <style id="rail-darpan-live-premium-ui">
@@ -2428,6 +2475,53 @@ footer a,
 @media(prefers-reduced-motion:reduce) {
   .live-result-panel .live-v3-card { transition: none !important; }
 }
+
+/* RAIL DARPAN OFFICIAL LOGO V1 */
+.brand .logo {
+  overflow: hidden !important;
+  box-sizing: border-box !important;
+}
+
+.brand .logo img {
+  display: block !important;
+  width: 100% !important;
+  height: 100% !important;
+  max-width: 100% !important;
+  object-fit: contain !important;
+  object-position: center !important;
+  border-radius: 12px;
+}
+
+@media (max-width: 600px) {
+  .brand .logo {
+    width: 48px !important;
+    height: 48px !important;
+    flex: 0 0 48px !important;
+  }
+}
+
+</style>
+
+  <link rel="stylesheet" href="/festival-theme.css?v=20261109">
+
+<style id="rd-section-heading-alignment-fix">
+/* Align section headings with their inner content */
+#station-tools > .section-heading,
+#updates > .section-heading,
+#about > .section-heading {
+  box-sizing: border-box;
+  padding-left: 24px;
+  padding-right: 24px;
+  text-align: left;
+}
+
+/* Station panel uses 18px padding on mobile */
+@media (max-width: 760px) {
+  #station-tools > .section-heading {
+    padding-left: 18px;
+    padding-right: 18px;
+  }
+}
 </style>
 
 </head>
@@ -2438,26 +2532,10 @@ footer a,
   </div>
 
   <header>
-    <a class="brand" href="/">
-      <div class="logo" aria-label="Rail Darpan logo">
-  <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg"
-       role="img" aria-label="Rail Darpan">
-    <defs>
-      <linearGradient id="rdBrandGradient" x1="0" y1="0" x2="1" y2="1">
-        <stop offset="0%" stop-color="#174b68"/>
-        <stop offset="100%" stop-color="#071b35"/>
-      </linearGradient>
-    </defs>
-    <rect x="2" y="2" width="60" height="60" rx="17"
-          fill="url(#rdBrandGradient)"/>
-    <circle cx="46" cy="16" r="5" fill="#ffbd59"/>
-    <path d="M19 46V18h13c10 0 10 14 0 14H19M31 32l14 14"
-          fill="none" stroke="#ffffff" stroke-width="4.3"
-          stroke-linecap="round" stroke-linejoin="round"/>
-    <path d="M14 49h36M20 54h24"
-          fill="none" stroke="#50ddce" stroke-width="3"
-          stroke-linecap="round"/>
-  </svg>
+    <a class="brand" href="#rdAlertsCentre">
+      <div class="logo" aria-label="Rail Darpan official logo">
+  <img src="/images/logo.png" alt="Rail Darpan official logo"
+       width="1254" height="1254">
 </div>
       <div>
         <h1>Rail Darpan</h1>
@@ -2466,6 +2544,7 @@ footer a,
     </a>
     <nav>
       <a href="#services">Services</a>
+      <a href="#dashboard">My Dashboard</a>
       <a href="#updates">Railway Updates</a>
       <a href="#about">About</a>
     </nav>
@@ -2512,6 +2591,47 @@ footer a,
       </section>
     </section>
 
+
+    <section id="dashboard" class="rd-dashboard">
+      <div class="section-heading">
+        <h3>My Railway Dashboard</h3>
+        <p>Your favourite trains, saved stations and recent searches in one place.</p>
+      </div>
+
+      <div id="rdDashboardSummary" class="rd-dashboard-summary"></div>
+
+      <div class="rd-dashboard-grid">
+        <section class="rd-dashboard-card">
+          <div class="rd-dashboard-card-heading">
+            <h4>Favourite Trains</h4>
+          </div>
+          <div id="rdFavouriteTrains"></div>
+        </section>
+
+        <section class="rd-dashboard-card">
+          <div class="rd-dashboard-card-heading">
+            <h4>Saved Stations</h4>
+          </div>
+          <div id="rdSavedStations"></div>
+        </section>
+
+        <section class="rd-dashboard-card rd-dashboard-card-wide">
+          <div class="rd-dashboard-card-heading">
+            <h4>Recent Train Searches</h4>
+            <button type="button" id="rdClearRecent" class="rd-dashboard-button">
+              Clear History
+            </button>
+          </div>
+          <div id="rdRecentTrains"></div>
+        </section>
+      </div>
+
+      <p class="rd-dashboard-privacy">
+        Your dashboard data is saved in this browser on this device.
+        Clearing browser storage will remove these saved items.
+      </p>
+    </section>
+
     <section id="services">
       <div class="section-heading">
         <h3>Railway services</h3>
@@ -2542,7 +2662,7 @@ footer a,
         <a class="card" href="#railway-news" style="display:block;color:inherit;text-decoration:none;cursor:pointer;">
           <div class="card-icon">⚠️</div>
           <h4>Disruptions & Alerts</h4>
-          <p>Planned section works, cancellations and diversions will be shown when verified information is available.</p>
+          <p>Explore official railway announcements about cancellations, diversions, rescheduling and blocks.</p>
         </a>
         <a class="card" href="#railway-news" style="display:block;color:inherit;text-decoration:none;cursor:pointer;">
           <div class="card-icon">📰</div>
@@ -2559,6 +2679,60 @@ footer a,
   </div>
 
   <div class="search-panel">
+
+    <section class="rd-between-panel">
+      <div class="section-heading">
+        <h3>Trains Between Stations</h3>
+        <p>Find available trains between your source and destination.</p>
+      </div>
+
+      <form id="rdBetweenForm" class="search-form">
+        <div class="field">
+          <label for="rdBetweenFrom">From Station Code</label>
+          <input
+            id="rdBetweenFrom"
+            type="text"
+            maxlength="10"
+            placeholder="Example: NDLS"
+            autocomplete="off"
+            required
+          >
+        </div>
+
+        <div class="field">
+          <label for="rdBetweenTo">To Station Code</label>
+          <input
+            id="rdBetweenTo"
+            type="text"
+            maxlength="10"
+            placeholder="Example: MMCT"
+            autocomplete="off"
+            required
+          >
+        </div>
+
+        <div class="field">
+          <label for="rdBetweenDate">Journey Date</label>
+          <input
+            id="rdBetweenDate"
+            type="date"
+            required
+          >
+        </div>
+
+        <button class="primary" id="rdBetweenSearchButton" type="submit">
+          Find Trains →
+        </button>
+      </form>
+
+      <p class="result-label">
+        Search station codes using Station Search below. Train availability
+        depends on the railway data provider.
+      </p>
+
+      <div id="rdBetweenResults" aria-live="polite"></div>
+    </section>
+
     <form id="stationSearchForm" class="search-form">
       <div class="field">
         <label for="stationQuery">Station name or keyword</label>
@@ -2600,6 +2774,33 @@ footer a,
     <h3>Railway News & Official Updates</h3>
     <p>Indian Railways की घोषणाएँ और महत्वपूर्ण अपडेट आधिकारिक स्रोतों से देखें।</p>
   </div>
+
+  <section id="rdAlertsCentre" class="rd-alerts-centre">
+    <div class="rd-alerts-heading">
+      <span class="rd-alerts-eyebrow">TRAIN DISRUPTION SEARCH</span>
+      <h3>Train Running Status &amp; Alerts</h3>
+
+    </div>
+
+    <div id="rdAlertsSummary" class="rd-alerts-summary">
+      Loading official railway announcements…
+    </div>
+
+    <div id="rdAlertFilters" class="rd-alert-filters">
+      <button type="button" data-alert-filter="all" aria-pressed="true">All</button>
+      <button type="button" data-alert-filter="cancellation" aria-pressed="false">Cancellations</button>
+      <button type="button" data-alert-filter="diversion" aria-pressed="false">Diversions</button>
+      <button type="button" data-alert-filter="rescheduling" aria-pressed="false">Rescheduling</button>
+      <button type="button" data-alert-filter="block" aria-pressed="false">Traffic / Power Blocks</button>
+      <button type="button" data-alert-filter="other" aria-pressed="false">Other Notices</button>
+    </div>
+
+    <div id="rdAlertFeed" class="rd-alert-feed" aria-live="polite">
+      <p class="rd-alert-empty">Search a train number or train name to check its status.</p>
+    </div>
+  </section>
+
+
 
   <div class="services-grid">
     <article class="service-card">
@@ -2671,6 +2872,7 @@ footer a,
   </footer>
 
   <script src="/app.js" defer></script>
+  <script src="/pwa.js" defer></script>
 
 <script>
 (function () {
@@ -2720,6 +2922,7 @@ footer a,
 })();
 </script>
 
+  <script src="/festival-theme.js?v=20261109"></script>
 </body>
 </html>
 

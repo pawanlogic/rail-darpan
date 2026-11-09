@@ -21,11 +21,13 @@ async function call(path, apiKey, options = {}) {
 
 export const railradar = {
   stationSearch: (query, limit, key) => call("/lookup/search/stations", key, {query:{q:query, limit}}),
+  trainSearch: (query, limit, key) => call("/lookup/search/trains", key, {query:{q:query, limit}}),
   pnr: (pnr, key) => call(`/pnr/${encodeURIComponent(pnr)}`, key),
   liveTrain: (number, date, key) => call(`/trains/${encodeURIComponent(number)}/live`, key, {query:{date}}),
   stationLive: (code, hours, key) => call(`/stations/${encodeURIComponent(code)}/live`, key, {query:{hours}}),
   between: (from, to, date, key) => call(`/trains/between/${encodeURIComponent(from)}/${encodeURIComponent(to)}`, key, {query:{date}}),
   seats: (number, query, key) => call(`/trains/${encodeURIComponent(number)}/seats`, key, {query}),
   schedule: (number, key) => call(`/trains/${encodeURIComponent(number)}`, key),
+  exceptions: (type, key) => call("/trains/exceptions", key, {query:{type}}),
   fare: (number, query, key) => call(`/trains/${encodeURIComponent(number)}/fare`, key, {query})
 };

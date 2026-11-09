@@ -5,6 +5,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 import dotenv from "dotenv";
 import { railradar } from "./providers/railradar.js";
+import { providerCache, getProviderCacheStats } from "./provider-cache.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -15,8 +16,8 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 const API_KEY = process.env.RAILRADAR_API_KEY;
 
-app.use(express.json());app.use(express.json());app.use(express.json());app.use(cors());
 app.use(express.json());
+app.use(cors());
 
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -29,6 +30,7 @@ const apiLimiter = rateLimit({
 });
 
 app.use("/api", apiLimiter);
+app.use("/api", providerCache);
 
 app.use(express.static(path.resolve(__dirname, "../../public")));
 
@@ -36,7 +38,8 @@ app.get("/api/health", (req, res) => {
   res.json({
     ok: true,
     service: "Rail Darpan API",
-    providerConfigured: Boolean(API_KEY)
+    providerConfigured: Boolean(API_KEY),
+    cache: getProviderCacheStats()
   });
 });
 
@@ -80,6 +83,27 @@ app.get("/api/train/:number/live", async (req, res) => {
   }
 });
 
+
+/* Train number/name autocomplete search */
+app.get("/api/train/search", async (req, res) => {
+  const query = String(req.query.q || "").trim();
+
+  if (!query || query.length > 100) {
+    return res.status(400).json({
+      success: false,
+      error: "Enter a train number or name (1-100 characters)."
+    });
+  }
+
+  try {
+    const limit = Math.min(50, Math.max(1, Number(req.query.limit) || 10));
+    const data = await railradar.trainSearch(query, limit, API_KEY);
+    res.json(data);
+  } catch (error) {
+    handleError(res, error);
+  }
+});
+
 // Train schedule
 app.get("/api/train/:number/schedule", async (req, res) => {
   if (!/^\d{1,10}$/.test(req.params.number)) {
@@ -112,6 +136,50 @@ app.get("/api/stations/search", async (req, res) => {
   }
 });
 
+
+// Trains between two stations
+app.get("/api/trains/between", async (req, res) => {
+  const from = String(req.query.from || "").trim().toUpperCase();
+  const to = String(req.query.to || "").trim().toUpperCase();
+  const date = String(req.query.date || "").trim();
+
+  if (!/^[A-Z0-9]{2,10}$/.test(from)) {
+    return res.status(400).json({ error: "Enter a valid source station code." });
+  }
+
+  if (!/^[A-Z0-9]{2,10}$/.test(to)) {
+    return res.status(400).json({ error: "Enter a valid destination station code." });
+  }
+
+  if (from === to) {
+    return res.status(400).json({
+      error: "Source and destination stations must be different."
+    });
+  }
+
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+    return res.status(400).json({
+      error: "Enter a valid journey date in YYYY-MM-DD format."
+    });
+  }
+
+  const parsedDate = new Date(`${date}T00:00:00.000Z`);
+
+  if (
+    Number.isNaN(parsedDate.getTime()) ||
+    parsedDate.toISOString().slice(0, 10) !== date
+  ) {
+    return res.status(400).json({ error: "Invalid journey date." });
+  }
+
+  try {
+    const data = await railradar.between(from, to, date, API_KEY);
+    return res.json(data);
+  } catch (error) {
+    handleError(res, error);
+  }
+});
+
 // Live station information
 app.get("/api/station/:code/live", async (req, res) => {
   const code = req.params.code.trim().toUpperCase();
@@ -124,6 +192,35 @@ app.get("/api/station/:code/live", async (req, res) => {
     const hours = Math.min(24, Math.max(1, Number(req.query.hours) || 4));
     const data = await railradar.stationLive(code, hours, API_KEY);
     res.json(data);
+  } catch (error) {
+    handleError(res, error);
+  }
+});
+
+
+// Active train operational exceptions from RailRadar
+app.get("/api/alerts", async (req, res) => {
+  const type = String(req.query.type || "all").trim().toLowerCase();
+
+  const allowedTypes = new Set([
+    "all",
+    "cancelled",
+    "rescheduled",
+    "diverted",
+    "partially_cancelled",
+    "partial_source",
+    "partial_destination"
+  ]);
+
+  if (!allowedTypes.has(type)) {
+    return res.status(400).json({
+      error: "Invalid alert type."
+    });
+  }
+
+  try {
+    const data = await railradar.exceptions(type, API_KEY);
+    return res.json(data);
   } catch (error) {
     handleError(res, error);
   }
