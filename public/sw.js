@@ -1,4 +1,4 @@
-const CACHE_NAME = "rail-darpan-pwa-v1";
+const CACHE_NAME = "rail-darpan-pwa-v2";
 
 const SHELL_ASSETS = [
   "/",
@@ -79,8 +79,9 @@ self.addEventListener("fetch", event => {
         return response;
       } catch (_) {
         return (
-          await caches.match("/offline.html") ||
           await caches.match("/") ||
+          await caches.match("/index.html") ||
+          await caches.match("/offline.html") ||
           new Response("Offline", {
             status: 503,
             headers: { "Content-Type": "text/plain" }
