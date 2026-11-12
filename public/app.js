@@ -4588,17 +4588,17 @@ function renderCompactPnr(payload, panel) {
 
   const style = document.createElement("style");
   style.textContent = `
-    .rd-pnr-wrap { display:grid; gap:16px; margin-top:14px; color:var(--text-color,inherit); }
-    .rd-pnr-hero { position:relative; overflow:hidden; padding:20px; border-radius:17px; background:linear-gradient(120deg,#102b50,#174b79 65%,#176c87); color:#fff; box-shadow:0 9px 25px rgba(10,45,80,.18); }
+    .rd-pnr-wrap { display:grid; gap:12px; margin-top:11px; color:var(--text-color,inherit); }
+    .rd-pnr-hero { position:relative; overflow:hidden; padding:16px 18px; border-radius:15px; background:linear-gradient(120deg,#102b50,#174b79 65%,#176c87); color:#fff; box-shadow:0 7px 20px rgba(10,45,80,.16); }
     .rd-pnr-hero:after { content:""; position:absolute; width:190px; height:190px; border:1px solid rgba(255,255,255,.12); border-radius:50%; right:-55px; top:-85px; box-shadow:0 0 0 22px rgba(255,255,255,.035),0 0 0 45px rgba(255,255,255,.025); pointer-events:none; }
     .rd-pnr-hero-top { display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; position:relative; z-index:1; }
     .rd-pnr-eyebrow { font-size:11px; letter-spacing:1.6px; text-transform:uppercase; opacity:.76; font-weight:700; }
     .rd-pnr-number { font-size:25px; font-weight:800; letter-spacing:1px; margin-top:5px; }
     .rd-pnr-badge { display:inline-flex; align-items:center; gap:6px; border-radius:30px; padding:7px 11px; font-size:11px; font-weight:750; background:rgba(255,255,255,.15); border:1px solid rgba(255,255,255,.2); }
-    .rd-pnr-train { margin-top:19px; padding-top:15px; border-top:1px solid rgba(255,255,255,.18); position:relative; z-index:1; }
+    .rd-pnr-train { margin-top:13px; padding-top:11px; border-top:1px solid rgba(255,255,255,.18); position:relative; z-index:1; }
     .rd-pnr-train-name { font-size:19px; font-weight:750; line-height:1.35; }
     .rd-pnr-train-meta { display:flex; flex-wrap:wrap; gap:8px 17px; margin-top:7px; font-size:12px; opacity:.83; }
-    .rd-pnr-route { padding:18px; border:1px solid var(--border-color,rgba(127,127,127,.2)); border-radius:16px; background:var(--card-bg,rgba(127,127,127,.045)); }
+    .rd-pnr-route { padding:14px; border:1px solid var(--border-color,rgba(127,127,127,.2)); border-radius:14px; background:var(--card-bg,rgba(127,127,127,.045)); }
     .rd-pnr-route-title { font-size:13px; font-weight:750; margin-bottom:17px; }
     .rd-pnr-route-track { display:grid; grid-template-columns:minmax(0,1fr) 90px minmax(0,1fr); align-items:center; gap:8px; }
     .rd-pnr-station:last-child { text-align:right; }
@@ -4612,25 +4612,27 @@ function renderCompactPnr(payload, panel) {
     .rd-pnr-track-line:after { right:0; background:#35a9a0; }
     .rd-pnr-track-icon { font-size:17px; }
     .rd-pnr-route-meta { display:flex; flex-wrap:wrap; gap:8px 18px; margin-top:17px; padding-top:12px; border-top:1px solid var(--border-color,rgba(127,127,127,.15)); font-size:11px; opacity:.75; }
-    .rd-pnr-section { border:1px solid var(--border-color,rgba(127,127,127,.2)); border-radius:16px; padding:16px; background:var(--card-bg,rgba(127,127,127,.035)); min-width:0; }
-    .rd-pnr-section-head { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:13px; }
+    .rd-pnr-section { border:1px solid var(--border-color,rgba(127,127,127,.2)); border-radius:14px; padding:13px; background:var(--card-bg,rgba(127,127,127,.035)); min-width:0; box-sizing:border-box; }
+    .rd-pnr-info-layout { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:12px; align-items:start; }
+    @media(max-width:700px) { .rd-pnr-info-layout { grid-template-columns:1fr; } }
+    .rd-pnr-section-head { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:10px; }
     .rd-pnr-section-title { font-size:14px; font-weight:800; }
     .rd-pnr-section-sub { font-size:11px; opacity:.62; margin-top:3px; }
     .rd-pnr-count { font-size:11px; font-weight:750; padding:5px 9px; border-radius:20px; background:rgba(35,135,209,.12); color:#2786ca; }
-    .rd-pnr-passengers { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:10px; }
-    .rd-pnr-passenger { border:1px solid var(--border-color,rgba(127,127,127,.17)); border-radius:12px; padding:13px; background:var(--card-bg,rgba(127,127,127,.055)); min-width:0; }
-    .rd-pnr-passenger-top { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:11px; }
+    .rd-pnr-passengers { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:8px; }
+    .rd-pnr-passenger { border:1px solid var(--border-color,rgba(127,127,127,.17)); border-radius:11px; padding:10px; background:var(--card-bg,rgba(127,127,127,.055)); min-width:0; }
+    .rd-pnr-passenger-top { display:flex; align-items:center; justify-content:space-between; gap:7px; margin-bottom:9px; }
     .rd-pnr-passenger-name { font-size:12px; font-weight:800; }
     .rd-pnr-status { font-size:10px; font-weight:750; border-radius:20px; padding:5px 8px; background:rgba(22,163,74,.12); color:#15934c; overflow-wrap:anywhere; }
     .rd-pnr-status.pending { background:rgba(217,145,25,.13); color:#c18419; }
     .rd-pnr-status.cancelled { background:rgba(220,65,65,.12); color:#d34c4c; }
-    .rd-pnr-passenger-info { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+    .rd-pnr-passenger-info { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:9px 8px; }
     .rd-pnr-info-label { font-size:10px; opacity:.62; margin-bottom:4px; }
     .rd-pnr-info-value { font-size:12px; font-weight:700; overflow-wrap:anywhere; }
-    .rd-pnr-booking-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(130px,1fr)); gap:9px; }
-    .rd-pnr-booking-item { padding:12px; border-radius:11px; background:var(--card-bg,rgba(127,127,127,.07)); border:1px solid var(--border-color,rgba(127,127,127,.13)); }
+    .rd-pnr-booking-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; }
+    .rd-pnr-booking-item { padding:10px; border-radius:10px; background:var(--card-bg,rgba(127,127,127,.07)); border:1px solid var(--border-color,rgba(127,127,127,.13)); min-width:0; }
     .rd-pnr-booking-label { font-size:10px; opacity:.65; margin-bottom:6px; }
-    .rd-pnr-booking-value { font-size:14px; font-weight:800; overflow-wrap:anywhere; }
+    .rd-pnr-booking-value { font-size:13px; font-weight:800; overflow-wrap:anywhere; }
     .rd-pnr-empty { font-size:12px; opacity:.65; margin:0; }
     .rd-pnr-extra { font-size:13px; }
     .rd-pnr-extra summary { cursor:pointer; font-weight:750; }
@@ -4647,6 +4649,241 @@ function renderCompactPnr(payload, panel) {
       .rd-pnr-section { padding:13px; }
       .rd-pnr-passengers { grid-template-columns:1fr; }
     }
+
+
+    /* PREMIUM PNR RESULT DESIGN */
+    .rd-pnr-wrap {
+      gap: 14px;
+      color: var(--text-color,#172b4d);
+    }
+
+    .rd-pnr-hero {
+      padding: 21px;
+      border-radius: 18px;
+      background:
+        radial-gradient(circle at 92% 5%,rgba(76,201,240,.28),transparent 30%),
+        linear-gradient(125deg,#092747 0%,#104c7c 58%,#087e91 100%);
+      box-shadow: 0 10px 26px rgba(10,48,85,.22);
+      border: 1px solid rgba(255,255,255,.13);
+    }
+
+    .rd-pnr-eyebrow {
+      color: #c7e8ff;
+      opacity: 1;
+      letter-spacing: 1.8px;
+    }
+
+    .rd-pnr-number {
+      font-size: 29px;
+      letter-spacing: 1.4px;
+      text-shadow: 0 2px 10px rgba(0,0,0,.15);
+    }
+
+    .rd-pnr-badge {
+      background: rgba(255,255,255,.19);
+      border: 1px solid rgba(255,255,255,.32);
+      color: #fff;
+      padding: 8px 13px;
+      backdrop-filter: blur(8px);
+    }
+
+    .rd-pnr-train {
+      border-top-color: rgba(255,255,255,.25);
+    }
+
+    .rd-pnr-train-name {
+      font-size: 20px;
+      color: #fff;
+    }
+
+    .rd-pnr-train-meta {
+      color: #e3f3ff;
+      opacity: 1;
+    }
+
+    .rd-pnr-route {
+      padding: 18px;
+      border: 1px solid rgba(35,135,209,.24);
+      border-radius: 17px;
+      background: linear-gradient(135deg,rgba(35,135,209,.10),rgba(53,169,160,.07));
+      box-shadow: 0 5px 16px rgba(30,90,140,.06);
+    }
+
+    .rd-pnr-route-title {
+      color: var(--text-color,#173653);
+      font-size: 14px;
+      margin-bottom: 19px;
+    }
+
+    .rd-pnr-station-code {
+      color: #1683c5;
+      font-size: 26px;
+    }
+
+    .rd-pnr-station-name {
+      color: var(--text-color,#233b55);
+    }
+
+    .rd-pnr-station-caption {
+      color: var(--muted-text-color,#64748b);
+      opacity: 1;
+    }
+
+    .rd-pnr-route-meta {
+      color: var(--muted-text-color,#52677d);
+      opacity: 1;
+      border-top-color: rgba(35,135,209,.17);
+    }
+
+    .rd-pnr-section {
+      padding: 16px;
+      border: 1px solid var(--border-color,rgba(70,110,150,.22));
+      border-radius: 16px;
+      background: var(--card-bg,rgba(255,255,255,.96));
+      box-shadow: 0 5px 18px rgba(20,55,90,.065);
+    }
+
+    .rd-pnr-section-head {
+      padding-bottom: 10px;
+      border-bottom: 1px solid var(--border-color,rgba(100,130,160,.16));
+      margin-bottom: 12px;
+    }
+
+    .rd-pnr-section-title {
+      font-size: 15px;
+      font-weight: 850;
+      color: var(--text-color,#183653);
+    }
+
+    .rd-pnr-section-sub {
+      color: var(--muted-text-color,#64748b);
+      opacity: 1;
+    }
+
+    .rd-pnr-count {
+      background: rgba(22,132,202,.13);
+      color: #0876bd;
+      border: 1px solid rgba(22,132,202,.15);
+    }
+
+    .rd-pnr-passenger {
+      padding: 13px;
+      border: 1px solid rgba(35,135,209,.22);
+      border-radius: 13px;
+      background: linear-gradient(145deg,rgba(35,135,209,.085),rgba(53,169,160,.045));
+      box-shadow: 0 3px 10px rgba(20,70,110,.045);
+    }
+
+    .rd-pnr-passenger-name {
+      font-size: 13px;
+      color: var(--text-color,#183653);
+    }
+
+    .rd-pnr-status {
+      background: rgba(22,163,74,.15);
+      color: #118044;
+      border: 1px solid rgba(22,163,74,.16);
+    }
+
+    .rd-pnr-status.pending {
+      background: rgba(217,145,25,.16);
+      color: #a96a00;
+      border-color: rgba(217,145,25,.2);
+    }
+
+    .rd-pnr-status.cancelled {
+      background: rgba(220,65,65,.14);
+      color: #c53535;
+      border-color: rgba(220,65,65,.18);
+    }
+
+    .rd-pnr-info-label {
+      color: var(--muted-text-color,#64748b);
+      opacity: 1;
+      font-size: 10px;
+      letter-spacing: .25px;
+    }
+
+    .rd-pnr-info-value {
+      color: var(--text-color,#183653);
+      font-size: 13px;
+      font-weight: 800;
+    }
+
+    .rd-pnr-booking-grid {
+      gap: 9px;
+    }
+
+    .rd-pnr-booking-item {
+      padding: 12px;
+      border: 1px solid var(--border-color,rgba(70,110,150,.17));
+      border-radius: 12px;
+      background: linear-gradient(145deg,rgba(35,135,209,.075),rgba(127,160,190,.045));
+    }
+
+    .rd-pnr-booking-label {
+      color: var(--muted-text-color,#64748b);
+      opacity: 1;
+      font-size: 10px;
+      letter-spacing: .2px;
+    }
+
+    .rd-pnr-booking-value {
+      color: var(--text-color,#183653);
+      font-size: 14px;
+      font-weight: 850;
+    }
+
+    .rd-pnr-extra {
+      border: 1px solid var(--border-color,rgba(70,110,150,.2));
+      border-radius: 13px;
+      padding: 13px;
+      background: var(--card-bg,rgba(255,255,255,.8));
+    }
+
+    .rd-pnr-extra summary {
+      color: var(--text-color,#183653);
+    }
+
+    .rd-pnr-extra-item {
+      border: 1px solid var(--border-color,rgba(70,110,150,.15));
+      border-radius: 10px;
+    }
+
+    @media(max-width:700px) {
+      .rd-pnr-info-layout {
+        grid-template-columns: minmax(0,1fr);
+        gap: 11px;
+      }
+    }
+
+    @media(max-width:520px) {
+      .rd-pnr-hero {
+        padding: 17px;
+        border-radius: 15px;
+      }
+
+      .rd-pnr-number {
+        font-size: 24px;
+      }
+
+      .rd-pnr-route {
+        padding: 14px;
+      }
+
+      .rd-pnr-section {
+        padding: 13px;
+      }
+
+      .rd-pnr-passengers {
+        grid-template-columns: 1fr;
+      }
+
+      .rd-pnr-booking-grid {
+        grid-template-columns: repeat(2,minmax(0,1fr));
+      }
+    }
+
   `;
   panel.appendChild(style);
 
@@ -4828,6 +5065,9 @@ function renderCompactPnr(payload, panel) {
   if (routeMeta.children.length) route.appendChild(routeMeta);
   if (source || destination) wrap.appendChild(route);
 
+  const infoLayout = document.createElement("div");
+  infoLayout.className = "rd-pnr-info-layout";
+
   const passengerSection = section(
     "Passenger Status",
     "Booking and current reservation details",
@@ -4847,9 +5087,11 @@ function renderCompactPnr(payload, panel) {
 
       const passengerName = document.createElement("div");
       passengerName.className = "rd-pnr-passenger-name";
-      passengerName.textContent = "Passenger " + (index + 1);
+      passengerName.textContent = read(person, ["serialNumber", "passengerName", "name"]) || ("Passenger " + (index + 1));
 
-      const statusValue = read(person, ["currentStatus", "current_status", "current", "status", "bookingStatus", "booking_status"]);
+      const current = person.current && typeof person.current === "object" ? person.current : {};
+      const bookingInfo = person.booking && typeof person.booking === "object" ? person.booking : {};
+      const statusValue = read(current, ["status"]) || read(person, ["currentStatus", "current_status", "status", "bookingStatus", "booking_status"]);
       const status = document.createElement("span");
       status.className = "rd-pnr-status";
       status.textContent = display(statusValue || "Status unavailable");
@@ -4862,11 +5104,30 @@ function renderCompactPnr(payload, panel) {
       const info = document.createElement("div");
       info.className = "rd-pnr-passenger-info";
 
+      const coachValue = read(current, ["coach", "coachNumber", "coach_number"]) || read(person, ["coach", "coachNumber", "coach_number"]);
+      const seatValue = read(current, ["berthNo", "berthNumber", "berth_number", "seatNumber", "seat_number"]) || read(person, ["berthNo", "berth", "berthNumber", "berth_number", "seatNumber", "seat_number"]);
+      const berthCode = read(current, ["berthCode", "berthType", "berth_type"]) || read(person, ["berthCode", "berthType", "berth_type"]);
+      const berthTypes = {
+        LB: "LOWER",
+        MB: "MIDDLE",
+        UB: "UPPER",
+        SL: "SIDE LOWER",
+        SU: "SIDE UPPER",
+        WS: "WINDOW SIDE",
+        SM: "SIDE MIDDLE",
+        CB: "CABIN",
+        CP: "COUPE"
+      };
+      const berthTypeValue = berthTypes[String(berthCode).toUpperCase()] || berthCode;
+      const confirmed = /CNF|CONFIRMED/i.test(String(statusValue));
+      const notAllotted = confirmed ? "Not allotted yet" : "";
+
       [
-        ["Booking", read(person, ["bookingStatus", "booking_status", "booking"])],
-        ["Current", read(person, ["currentStatus", "current_status", "current"])],
-        ["Coach", read(person, ["coach", "coachNumber", "coach_number"])],
-        ["Berth / Seat", read(person, ["berth", "berthNumber", "berth_number", "seatNumber", "seat_number"])]
+        ["Booking", read(bookingInfo, ["status", "details"]) || read(person, ["bookingStatus", "booking_status"])],
+        ["Current", read(current, ["status", "details"]) || statusValue],
+        ["Coach", coachValue || notAllotted],
+        ["Seat Number", seatValue || notAllotted],
+        ["Berth Type", berthTypeValue || notAllotted]
       ].forEach(([label, value]) => {
         if (value === "" || value === null || value === undefined) return;
         const item = document.createElement("div");
@@ -4891,21 +5152,26 @@ function renderCompactPnr(payload, panel) {
     empty.textContent = "Passenger details are not available in this response.";
     passengerSection.appendChild(empty);
   }
-  wrap.appendChild(passengerSection);
+  infoLayout.appendChild(passengerSection);
 
-  const bookingSection = section("Booking Details", "Ticket and fare information");
+  const bookingSection = section("Booking Details", "Fare, booking and journey information");
   const bookingGrid = document.createElement("div");
   bookingGrid.className = "rd-pnr-booking-grid";
 
-  bookingItem(bookingGrid, "Total Fare", booking.fare);
-  bookingItem(bookingGrid, "Ticket Fare", booking.ticketFare);
-  bookingItem(bookingGrid, "Booking Date", booking.bookingDate);
-  bookingItem(bookingGrid, "Booking Status", read(booking, ["status", "bookingStatus"]));
+  bookingItem(bookingGrid, "Total Fare", read(booking, ["fare", "totalFare", "total_fare"]));
+  bookingItem(bookingGrid, "Ticket Fare", read(booking, ["ticketFare", "ticket_fare"]));
+  bookingItem(bookingGrid, "Booking Date", read(booking, ["bookingDate", "booking_date"]));
+  bookingItem(bookingGrid, "Booking Status", read(booking, ["status", "bookingStatus", "booking_status"]));
+  bookingItem(bookingGrid, "Travel Class", read(journey, ["class", "travelClass", "travel_class"]));
+  bookingItem(bookingGrid, "Quota", read(journey, ["quota"]));
+  bookingItem(bookingGrid, "Boarding Point", boarding ? stationName(boarding) : "");
 
   if (bookingGrid.children.length) {
     bookingSection.appendChild(bookingGrid);
-    wrap.appendChild(bookingSection);
+    infoLayout.appendChild(bookingSection);
   }
+
+  wrap.appendChild(infoLayout);
 
   const knownKeys = ["pnr", "pnrNumber", "pnr_number", "train", "journey", "chart", "booking", "passengers"];
   const extraKeys = Object.keys(data).filter(key => !knownKeys.includes(key));
