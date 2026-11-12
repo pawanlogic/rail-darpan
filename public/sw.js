@@ -1,10 +1,11 @@
-const CACHE_NAME = "rail-darpan-pwa-v3";
+const CACHE_NAME = "rail-darpan-pwa-v4";
 
 const SHELL_ASSETS = [
   "/",
   "/index.html",
   "/offline.html",
   "/app.js",
+  "/auth.js",
   "/pwa.js",
   "/language.js",
   "/festival-theme.css",

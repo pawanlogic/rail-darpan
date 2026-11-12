@@ -14,6 +14,7 @@ import {
   railkitTrainsByName
 } from "./providers/railkit.js";
 import { providerCache, getProviderCacheStats } from "./provider-cache.js";
+import { requireFirebaseAuth } from "./firebase-auth.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -38,7 +39,7 @@ const apiLimiter = rateLimit({
 });
 
 app.use("/api", apiLimiter);
-app.use("/api", providerCache);
+
 
 app.use(express.static(path.resolve(__dirname, "../../public")));
 
@@ -54,6 +55,19 @@ app.get("/api/health", (req, res) => {
     cache: getProviderCacheStats()
   });
 });
+
+// Public endpoints remain accessible without login.
+// All other API endpoints require a verified Firebase ID token.
+app.use("/api", (req, res, next) => {
+  if (req.path === "/health" || req.path === "/news") {
+    return next();
+  }
+
+  return requireFirebaseAuth(req, res, next);
+});
+
+// Cache only runs after successful authentication.
+app.use("/api", providerCache);
 
 function handleError(res, error) {
   console.error("Railway API error:", error.message);

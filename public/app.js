@@ -5490,13 +5490,18 @@ function renderResult(data) {
   result.appendChild(panel);
 }
 
-const pnrHistoryKey = "raildarpan_pnr_history";
+function getPnrHistoryKey() {
+  const user = window.RailDarpanAuth?.currentUser;
+  return user?.uid ? "raildarpan_pnr_history_" + user.uid : null;
+}
 const pnrHistoryList = document.getElementById("pnrHistoryList");
 const clearPnrHistoryButton = document.getElementById("clearPnrHistory");
 
 function getPnrHistory() {
   try {
-    const saved = JSON.parse(localStorage.getItem(pnrHistoryKey) || "[]");
+    const key = getPnrHistoryKey();
+    if (!key) return [];
+    const saved = JSON.parse(localStorage.getItem(key) || "[]");
     return Array.isArray(saved) ? saved : [];
   } catch {
     return [];
@@ -5535,9 +5540,11 @@ function renderPnrHistory() {
 
 function savePnrHistory(pnr) {
   try {
+    const key = getPnrHistoryKey();
+    if (!key) return false;
     const history = getPnrHistory().filter(item => item.pnr !== pnr);
     history.unshift({ pnr, checkedAt: new Date().toISOString() });
-    localStorage.setItem(pnrHistoryKey, JSON.stringify(history.slice(0, 10)));
+    localStorage.setItem(key, JSON.stringify(history.slice(0, 10)));
     renderPnrHistory();
     return true;
   } catch {
@@ -5548,13 +5555,18 @@ function savePnrHistory(pnr) {
 if (clearPnrHistoryButton) {
   clearPnrHistoryButton.addEventListener("click", () => {
     try {
-      localStorage.removeItem(pnrHistoryKey);
+      const key = getPnrHistoryKey();
+      if (key) localStorage.removeItem(key);
     } catch {}
     renderPnrHistory();
   });
 }
 
 renderPnrHistory();
+
+document.addEventListener("railDarpanAuthChanged", () => {
+  renderPnrHistory();
+});
 
 form.addEventListener("submit", async event => {
   event.preventDefault();
