@@ -82,7 +82,7 @@ export async function requireFirebaseAuth(req, res, next) {
 
     return next();
   } catch (error) {
-    console.error("Firebase authentication failed:", error.message);
+    console.error("Firebase authentication failed:", error.stack || error.message);
 
     return res.status(401).json({
       error: "Your login is invalid or expired. Please sign in again.",
