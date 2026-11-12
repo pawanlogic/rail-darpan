@@ -3745,6 +3745,229 @@ function rdScheduleV2RenderDayTimeline(route, panel) {
 
 
 function renderCompactScheduleV2(payload, panel) {
+
+  panel.classList.add("schedule-result-panel");
+
+  if (!document.getElementById("rd-schedule-premium-v1-style")) {
+    const premiumStyle = document.createElement("style");
+    premiumStyle.id = "rd-schedule-premium-v1-style";
+    premiumStyle.textContent = `
+      .result-panel.schedule-result-panel {
+        position: relative;
+        box-sizing: border-box;
+        overflow: hidden;
+        padding: clamp(15px, 2.5vw, 25px) !important;
+        border: 1px solid #c7d2fe !important;
+        border-radius: 22px !important;
+        color: #172554 !important;
+        background:
+          radial-gradient(ellipse at 100% 0%, rgba(103,232,249,.20), transparent 32%),
+          radial-gradient(ellipse at 0% 100%, rgba(167,139,250,.14), transparent 34%),
+          linear-gradient(145deg, #ffffff 0%, #f8faff 58%, #eef2ff 100%) !important;
+        box-shadow: 0 18px 45px rgba(49,46,129,.13) !important;
+      }
+
+      .schedule-result-panel::before {
+        content: "";
+        display: block;
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 5px;
+        background: linear-gradient(90deg, #4f46e5, #8b5cf6, #06b6d4, #34d399);
+        pointer-events: none;
+      }
+
+      .schedule-result-panel > h4 {
+        margin: 7px 0 12px;
+        padding: 15px 17px;
+        border: 1px solid #c7d2fe;
+        border-radius: 14px;
+        color: #fff !important;
+        background: linear-gradient(115deg, #3730a3, #6d28d9 55%, #0891b2);
+        font-size: clamp(20px, 3vw, 28px);
+        font-weight: 850;
+        line-height: 1.35;
+        letter-spacing: -.4px;
+        overflow-wrap: anywhere;
+      }
+
+      .schedule-result-panel .rd-schedule-v2-subtitle {
+        margin: 10px 2px 15px;
+        color: #475569;
+        font-size: 12px;
+        font-weight: 700;
+        line-height: 1.7;
+      }
+
+      .schedule-result-panel .rd-schedule-v2-grid {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 11px;
+        margin: 15px 0 18px;
+      }
+
+      .schedule-result-panel .rd-schedule-v2-card {
+        position: relative;
+        min-width: 0;
+        padding: 15px 13px;
+        overflow: hidden;
+        border: 1px solid #dbeafe;
+        border-radius: 15px;
+        background: linear-gradient(145deg, #fff, #eff6ff);
+        box-shadow: 0 5px 16px rgba(37,99,235,.06);
+        transition: transform .18s ease, box-shadow .18s ease;
+      }
+
+      .schedule-result-panel .rd-schedule-v2-card:nth-child(2) {
+        border-color: #fed7aa;
+        background: linear-gradient(145deg, #fff, #fff7ed);
+      }
+
+      .schedule-result-panel .rd-schedule-v2-card:nth-child(3) {
+        border-color: #c4b5fd;
+        background: linear-gradient(145deg, #fff, #f5f3ff);
+      }
+
+      .schedule-result-panel .rd-schedule-v2-card:nth-child(4) {
+        border-color: #a5f3fc;
+        background: linear-gradient(145deg, #fff, #ecfeff);
+      }
+
+      .schedule-result-panel .rd-schedule-v2-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 9px 22px rgba(79,70,229,.11);
+      }
+
+      .schedule-result-panel .rd-schedule-v2-label {
+        color: #64748b;
+        font-size: 10px;
+        font-weight: 800;
+        letter-spacing: .5px;
+        text-transform: uppercase;
+      }
+
+      .schedule-result-panel .rd-schedule-v2-value {
+        color: #172554;
+        font-size: clamp(13px, 1.5vw, 17px);
+        font-weight: 850;
+        line-height: 1.5;
+      }
+
+      .schedule-result-panel .rd-schedule-v2-journey,
+      .schedule-result-panel .rd-schedule-v2-timeline,
+      .schedule-result-panel .rd-schedule-v2-days,
+      .schedule-result-panel .rd-schedule-v2-route {
+        margin-top: 15px;
+        padding: 15px;
+        border: 1px solid #dbe4ff;
+        border-radius: 16px;
+        background: linear-gradient(145deg, #fff, #f8faff);
+        box-shadow: 0 5px 18px rgba(37,51,112,.045);
+      }
+
+      .schedule-result-panel .rd-schedule-v2-title {
+        margin: 0 0 12px;
+        padding-bottom: 10px;
+        border-bottom: 1px solid #e0e7ff;
+        color: #312e81;
+        font-size: 15px;
+        font-weight: 850;
+        line-height: 1.5;
+      }
+
+      .schedule-result-panel .rd-schedule-v2-endpoint {
+        border: 1px solid #dbeafe;
+        background: linear-gradient(145deg, #eef2ff, #f5f3ff);
+      }
+
+      .schedule-result-panel .rd-schedule-v2-endpoint-time {
+        color: #14532d;
+        font-size: 21px;
+        font-weight: 850;
+      }
+
+      .schedule-result-panel .rd-schedule-v2-day-card {
+        border-color: #dbeafe;
+        background: linear-gradient(145deg, #fff, #f1f5ff);
+      }
+
+      .schedule-result-panel .rd-schedule-v2-day-number {
+        color: #4f46e5;
+        font-weight: 850;
+      }
+
+      .schedule-result-panel .rd-schedule-v2-day.active {
+        background: linear-gradient(120deg, #dcfce7, #bbf7d0);
+        color: #166534;
+      }
+
+      .schedule-result-panel .rd-schedule-v2-stop {
+        padding: 13px 7px;
+        border-top-color: #e8edf8;
+      }
+
+      .schedule-result-panel .rd-schedule-v2-station {
+        color: #102a43;
+        font-size: 13px;
+        font-weight: 800;
+      }
+
+      .schedule-result-panel .rd-schedule-v2-meta {
+        color: #64748b;
+        line-height: 1.75;
+      }
+
+      .schedule-result-panel .rd-schedule-v2-platform {
+        border: 1px solid #bae6fd;
+        background: linear-gradient(120deg, #e0f2fe, #cffafe);
+        color: #075985;
+        font-weight: 850;
+      }
+
+      .schedule-result-panel .rd-schedule-v2-halt-badge {
+        border-radius: 999px;
+        background: linear-gradient(120deg, #dcfce7, #bbf7d0);
+        color: #166534;
+      }
+
+      .schedule-result-panel .rd-schedule-v2-more {
+        border: 1px solid #c7d2fe;
+        border-radius: 13px;
+        background: #fff;
+      }
+
+      .schedule-result-panel .rd-schedule-v2-more summary {
+        color: #3730a3;
+        font-weight: 800;
+      }
+
+      .schedule-result-panel .rd-schedule-v2-scroll {
+        max-height: 360px;
+        overflow-y: auto;
+        overscroll-behavior: contain;
+        -webkit-overflow-scrolling: touch;
+      }
+
+      @media (max-width: 760px) {
+        .schedule-result-panel .rd-schedule-v2-grid {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+      }
+
+      @media (max-width: 600px) {
+        .schedule-result-panel .rd-schedule-v2-journey-grid,
+        .schedule-result-panel .rd-schedule-v2-day-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .schedule-result-panel .rd-schedule-v2-card {
+          padding: 12px;
+        }
+      }
+    `;
+    document.head.appendChild(premiumStyle);
+  }
   if (!document.getElementById("rd-schedule-v2-style")) {
     const style = document.createElement("style");
     style.id = "rd-schedule-v2-style";
@@ -5397,6 +5620,373 @@ function stationMessage(container, message, className = "") {
 }
 
 
+
+/* RAIL DARPAN - SHARED AUTOCOMPLETE */
+
+(function installRdAutocompleteStyles() {
+  if (document.getElementById("rdAutocompleteStyles")) return;
+
+  const style = document.createElement("style");
+  style.id = "rdAutocompleteStyles";
+  style.textContent = `
+    .rd-autocomplete-wrap {
+      position: relative;
+      min-width: 0;
+    }
+    #station-tools .search-panel {
+      overflow: visible !important;
+    }
+
+    #station-tools .field:focus-within,
+    #station-tools .rd-autocomplete-wrap:focus-within {
+      position: relative;
+      z-index: 10000;
+    }
+
+    .rd-autocomplete-list {
+      position: absolute;
+      z-index: 9999;
+      top: calc(100% + 5px);
+      left: 0;
+      right: 0;
+      max-height: min(280px, 45vh);
+      overflow-y: auto;
+      overscroll-behavior: contain;
+      -webkit-overflow-scrolling: touch;
+      touch-action: pan-y;
+      padding: 5px;
+      border: 1px solid #d7e1ef;
+      border-radius: 11px;
+      background: #fff;
+      box-shadow: 0 12px 30px rgba(20, 40, 75, .16);
+    }
+    .rd-autocomplete-list[hidden] {
+      display: none !important;
+    }
+    .rd-autocomplete-option {
+      display: block;
+      width: 100%;
+      padding: 10px 12px;
+      border: 0;
+      border-radius: 7px;
+      background: #fff;
+      color: #173b70;
+      text-align: left;
+      cursor: pointer;
+      font: inherit;
+    }
+    .rd-autocomplete-option:hover,
+    .rd-autocomplete-option.active {
+      background: #edf4ff;
+    }
+    .rd-autocomplete-option strong {
+      display: block;
+      font-size: 13px;
+    }
+    .rd-autocomplete-option small {
+      display: block;
+      margin-top: 3px;
+      color: #64748b;
+      font-size: 11px;
+    }
+    .rd-station-amenities {
+      margin-top: 12px;
+    }
+    .rd-station-amenities summary {
+      cursor: pointer;
+      color: #2456a6;
+      font-size: 13px;
+      font-weight: 700;
+    }
+    .rd-station-amenities-content {
+      margin-top: 10px;
+    }
+  `;
+  document.head.appendChild(style);
+})();
+
+function rdAttachAutocomplete(inputEl, config) {
+  if (!inputEl || inputEl.dataset.rdAutocomplete === "ready") return;
+
+  inputEl.dataset.rdAutocomplete = "ready";
+
+  let wrapper = inputEl.parentElement;
+
+  if (!wrapper || (
+    !wrapper.classList.contains("field") &&
+    !wrapper.classList.contains("rd-autocomplete-wrap")
+  )) {
+    wrapper = document.createElement("div");
+    wrapper.className = "rd-autocomplete-wrap";
+    inputEl.parentNode.insertBefore(wrapper, inputEl);
+    wrapper.appendChild(inputEl);
+  } else {
+    wrapper.classList.add("rd-autocomplete-wrap");
+  }
+
+  const list = document.createElement("div");
+  list.className = "rd-autocomplete-list";
+  list.setAttribute("role", "listbox");
+  list.hidden = true;
+  wrapper.appendChild(list);
+
+  let timer = null;
+  let requestId = 0;
+  let activeIndex = -1;
+  let items = [];
+
+  function hide() {
+    list.hidden = true;
+    activeIndex = -1;
+  }
+
+  function choose(item) {
+    hide();
+    inputEl.value = config.value(item);
+
+    if (typeof config.onSelect === "function") {
+      config.onSelect(item);
+    }
+  }
+
+  function render(found) {
+    list.replaceChildren();
+    items = found.slice(0, 8);
+    activeIndex = -1;
+
+    if (!items.length) {
+      hide();
+      return;
+    }
+
+    items.forEach(item => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "rd-autocomplete-option";
+      button.setAttribute("role", "option");
+
+      const title = document.createElement("strong");
+      title.textContent = config.label(item);
+
+      const subtitle = document.createElement("small");
+      subtitle.textContent = config.description(item) || "";
+
+      button.append(title, subtitle);
+      button.addEventListener("mousedown", event => event.preventDefault());
+      button.addEventListener("click", () => choose(item));
+      list.appendChild(button);
+    });
+
+    list.hidden = false;
+  }
+
+  async function search() {
+    const query = inputEl.value.trim();
+
+    if (config.when && !config.when()) {
+      hide();
+      return;
+    }
+
+    if (query.length < 2) {
+      hide();
+      return;
+    }
+
+    const id = ++requestId;
+
+    try {
+      const response = await fetch(config.endpoint(query), {
+        headers: { Accept: "application/json" }
+      });
+
+      const payload = await response.json();
+
+      if (id !== requestId || inputEl.value.trim() !== query) return;
+      if (!response.ok) throw new Error("Search unavailable");
+
+      const found = config.items(payload);
+      render(Array.isArray(found) ? found : []);
+    } catch {
+      if (id === requestId) hide();
+    }
+  }
+
+  inputEl.addEventListener("input", () => {
+    clearTimeout(timer);
+
+    if (config.when && !config.when()) {
+      hide();
+      return;
+    }
+
+    timer = setTimeout(search, 250);
+  });
+
+  inputEl.addEventListener("keydown", event => {
+    if (list.hidden || !items.length) {
+      if (event.key === "Escape") hide();
+      return;
+    }
+
+    const options = [...list.querySelectorAll(".rd-autocomplete-option")];
+
+    if (event.key === "ArrowDown") {
+      event.preventDefault();
+      activeIndex = (activeIndex + 1) % items.length;
+    } else if (event.key === "ArrowUp") {
+      event.preventDefault();
+      activeIndex = (activeIndex - 1 + items.length) % items.length;
+    } else if (event.key === "Enter" && activeIndex >= 0) {
+      event.preventDefault();
+      choose(items[activeIndex]);
+      return;
+    } else if (event.key === "Escape") {
+      hide();
+      return;
+    } else {
+      return;
+    }
+
+    options.forEach((option, index) => {
+      option.classList.toggle("active", index === activeIndex);
+    });
+  });
+
+  inputEl.addEventListener("blur", () => setTimeout(hide, 160));
+}
+
+function rdStationSuggestions(payload) {
+  const data = payload && payload.data !== undefined
+    ? payload.data
+    : payload;
+
+  if (Array.isArray(data)) return data;
+  if (Array.isArray(data?.stations)) return data.stations;
+  if (Array.isArray(payload?.stations)) return payload.stations;
+
+  return [];
+}
+
+/* Station name autocomplete */
+const rdStationNameInput = document.getElementById("stationQuery");
+
+rdAttachAutocomplete(rdStationNameInput, {
+  endpoint: query => `/api/stations/search?q=${encodeURIComponent(query)}`,
+  items: rdStationSuggestions,
+  label: item => item.name || item.stationName || item.code || "Station",
+  description: item => [
+    item.code || item.stationCode || "",
+    item.city || item.cityName || ""
+  ].filter(Boolean).join(" · "),
+  value: item => item.name || item.stationName || item.code || "",
+  onSelect: () => stationSearchForm.requestSubmit()
+});
+
+/* Station code autocomplete */
+const rdStationCodeInput = document.getElementById("stationCode");
+
+rdAttachAutocomplete(rdStationCodeInput, {
+  endpoint: query => `/api/stations/search?q=${encodeURIComponent(query)}`,
+  items: rdStationSuggestions,
+  label: item => item.name || item.stationName || item.code || "Station",
+  description: item => [
+    item.code || item.stationCode || "",
+    item.city || item.cityName || ""
+  ].filter(Boolean).join(" · "),
+  value: item => String(
+    item.code || item.stationCode || item.name || ""
+  ).toUpperCase(),
+  onSelect: () => stationLiveForm.requestSubmit()
+});
+
+/* Main train autocomplete: Live and Schedule only, never PNR */
+rdAttachAutocomplete(input, {
+  when: () => currentMode === "live" || currentMode === "schedule",
+  endpoint: query => `/api/train/search?q=${encodeURIComponent(query)}&limit=8`,
+  items: payload => Array.isArray(payload.data) ? payload.data : [],
+  label: item => [
+    item.number || item.trainNumber || "",
+    item.name || item.trainName || ""
+  ].filter(Boolean).join(" — ") || "Train",
+  description: item => [
+    item.sourceName || item.source || "",
+    item.destName || item.destination || item.dest || ""
+  ].filter(Boolean).join(" → "),
+  value: item => String(item.number || item.trainNumber || ""),
+  onSelect: () => form.requestSubmit()
+});
+
+/* Station amenities inside Station Explorer result cards */
+function rdAddStationAmenities(card, code) {
+  if (!code) return;
+
+  const details = document.createElement("details");
+  details.className = "rd-station-amenities";
+
+  const summary = document.createElement("summary");
+  summary.textContent = "View Station Amenities";
+
+  const content = document.createElement("div");
+  content.className = "rd-station-amenities-content";
+
+  details.append(summary, content);
+  card.appendChild(details);
+
+  let loaded = false;
+  let loading = false;
+
+  details.addEventListener("toggle", async () => {
+    if (!details.open || loaded || loading) return;
+
+    loading = true;
+    stationMessage(content, "Loading station amenities…");
+
+    try {
+      const response = await fetch(
+        `/api/lookup/station/${encodeURIComponent(code)}/amenities`,
+        { headers: { Accept: "application/json" } }
+      );
+
+      const payload = await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          payload.error || payload.message || "Amenities unavailable."
+        );
+      }
+
+      const data = payload && payload.data !== undefined
+        ? payload.data
+        : payload;
+
+      content.replaceChildren();
+
+      if (data && typeof data === "object" &&
+          !Array.isArray(data) && Object.keys(data).length === 0) {
+        stationMessage(content, "No amenities information available.");
+      } else if (data && typeof data === "object") {
+        renderObject(data, content);
+      } else if (data !== undefined && data !== null) {
+        addText(content, "p", String(data));
+      } else {
+        stationMessage(content, "No amenities information available.");
+      }
+
+      loaded = true;
+    } catch (error) {
+      stationMessage(
+        content,
+        error.message || "Unable to load station amenities.",
+        "result-error"
+      );
+    } finally {
+      loading = false;
+    }
+  });
+}
+
+
 function rdShowProviderCacheNotice(container, response) {
   if (!container) return;
 
@@ -5814,8 +6404,8 @@ function renderStationSearch(data) {
     const card = document.createElement("div");
     card.className = "result-item";
 
-    const name = station.name || "Unknown station";
-    const code = station.code || "";
+    const name = station.name || station.stationName || "Unknown station";
+    const code = station.code || station.stationCode || "";
     const city = station.city || "";
 
     addText(card, "strong", name, "result-value");
@@ -5855,6 +6445,7 @@ function renderStationSearch(data) {
     });
 
     card.appendChild(saveButton);
+    rdAddStationAmenities(card, code);
     grid.appendChild(card);
   });
 
@@ -6484,6 +7075,7 @@ stationLiveForm.addEventListener("submit", async event => {
     stationMessage(stationLiveResults, error.message, "result-error");
   }
 });
+
 
 
 
@@ -7214,7 +7806,414 @@ rdNtesStyle.textContent = `
   }
 `;
 
+
 document.head.appendChild(rdNtesStyle);
+
+/* RAIL DARPAN: PREMIUM TRAIN RUNNING STATUS UI */
+const rdNtesPremiumStyle = document.createElement("style");
+rdNtesPremiumStyle.id = "rdNtesPremiumStyle";
+rdNtesPremiumStyle.textContent = `
+  #rdAlertsCentre {
+    position: relative;
+    overflow: hidden;
+    padding: 24px;
+    border: 1px solid rgba(91, 145, 210, .22);
+    border-radius: 22px;
+    background:
+      radial-gradient(ellipse at 100% 0%, rgba(48, 117, 201, .10), transparent 38%),
+      var(--card-bg, #fff);
+    box-shadow: 0 12px 36px rgba(18, 48, 85, .07);
+  }
+
+  #rdAlertsCentre::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, #123c78, #2388e8, #55c4db);
+  }
+
+  #rdAlertsCentre .rd-alerts-heading {
+    margin-bottom: 20px;
+  }
+
+  #rdAlertsCentre .rd-alerts-eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 6px 10px;
+    border: 1px solid rgba(37, 117, 201, .18);
+    border-radius: 30px;
+    background: rgba(37, 117, 201, .08);
+    color: #2676c5;
+    font-size: 10px;
+    font-weight: 850;
+    letter-spacing: 1.1px;
+  }
+
+  #rdAlertsCentre .rd-alerts-heading h3 {
+    margin: 12px 0 0;
+    color: var(--text-color, #172b49);
+    font-size: clamp(21px, 3vw, 27px);
+    font-weight: 850;
+    letter-spacing: -.6px;
+  }
+
+  #rdAlertsCentre #rdAlertFeed {
+    gap: 16px;
+  }
+
+  #rdAlertsCentre .rd-ntes-search {
+    grid-template-columns: minmax(0, 1fr) 190px auto;
+    align-items: end;
+    gap: 14px;
+    padding: 20px;
+    margin: 0 0 18px;
+    border: 1px solid rgba(91, 145, 210, .20);
+    border-radius: 17px;
+    background: linear-gradient(135deg, rgba(26, 83, 145, .075), rgba(47, 143, 218, .045));
+    box-shadow: 0 5px 18px rgba(18, 48, 85, .035);
+  }
+
+  #rdAlertsCentre .rd-ntes-search input {
+    min-height: 49px;
+    padding: 13px 15px;
+    border: 1px solid rgba(115, 145, 180, .35);
+    border-radius: 11px;
+    background: var(--card-bg, #fff);
+    color: var(--text-color, #172b49);
+    font-size: 14px;
+    outline: none;
+    transition: border-color .2s, box-shadow .2s;
+  }
+
+  #rdAlertsCentre .rd-ntes-search input:focus {
+    border-color: #2784d8;
+    box-shadow: 0 0 0 4px rgba(39, 132, 216, .12);
+  }
+
+  #rdAlertsCentre .rd-ntes-search button {
+    min-height: 49px;
+    padding: 13px 23px;
+    border-radius: 11px;
+    background: linear-gradient(135deg, #1762ad, #258ce0);
+    box-shadow: 0 5px 13px rgba(23, 98, 173, .20);
+    font-size: 13px;
+    font-weight: 800;
+    transition: transform .2s, box-shadow .2s;
+  }
+
+  #rdAlertsCentre .rd-ntes-search button:hover {
+    background: linear-gradient(135deg, #124e91, #1976c5);
+    box-shadow: 0 7px 17px rgba(23, 98, 173, .27);
+    transform: translateY(-1px);
+  }
+
+  #rdAlertsCentre .rd-ntes-search-help {
+    color: var(--muted, #64748b);
+    line-height: 1.6;
+  }
+
+  #rdAlertsCentre .rd-ntes-panel {
+    gap: 15px;
+    margin-top: 15px;
+  }
+
+  #rdAlertsCentre .rd-ntes-train-head {
+    position: relative;
+    overflow: hidden;
+    padding: 25px;
+    border: 1px solid rgba(69, 137, 208, .25);
+    border-radius: 17px;
+    background:
+      radial-gradient(circle at 95% 5%, rgba(80, 170, 255, .22), transparent 35%),
+      linear-gradient(125deg, #102c50, #174b7d 65%, #176ba7);
+    color: #fff;
+    box-shadow: 0 10px 25px rgba(17, 54, 94, .15);
+  }
+
+  #rdAlertsCentre .rd-ntes-train-title {
+    margin: 0 0 9px;
+    color: #fff;
+    font-size: clamp(20px, 3vw, 25px);
+    font-weight: 850;
+    line-height: 1.35;
+    overflow-wrap: anywhere;
+  }
+
+  #rdAlertsCentre .rd-ntes-train-head .rd-ntes-muted {
+    color: rgba(255, 255, 255, .76);
+  }
+
+  #rdAlertsCentre .rd-ntes-route-title {
+    margin-top: 17px;
+    color: #fff;
+    font-size: clamp(14px, 2vw, 17px);
+    font-weight: 800;
+    line-height: 1.6;
+    overflow-wrap: anywhere;
+  }
+
+  #rdAlertsCentre .rd-ntes-train-head .rd-ntes-muted:last-child {
+    margin-top: 9px;
+  }
+
+  #rdAlertsCentre .rd-ntes-status-card {
+    padding: 19px 21px;
+    border: 1px solid rgba(35, 143, 105, .22);
+    border-left: 5px solid #15966b;
+    border-radius: 15px;
+    background: linear-gradient(110deg, rgba(22, 163, 112, .10), rgba(22, 163, 112, .025));
+    box-shadow: 0 5px 15px rgba(20, 100, 75, .035);
+  }
+
+  #rdAlertsCentre .rd-ntes-status-label {
+    padding: 9px 14px;
+    border: 1px solid rgba(22, 163, 112, .20);
+    border-radius: 30px;
+    background: rgba(22, 163, 112, .12);
+    color: #087b54;
+    font-size: 12px;
+    font-weight: 850;
+  }
+
+  #rdAlertsCentre .rd-ntes-status-card.is-issue {
+    border: 1px solid rgba(220, 66, 66, .25);
+    border-left: 5px solid #dc4242;
+    background: linear-gradient(110deg, rgba(220, 66, 66, .10), rgba(220, 66, 66, .025));
+  }
+
+  #rdAlertsCentre .rd-ntes-status-card.is-issue .rd-ntes-status-label {
+    border: 1px solid rgba(220, 66, 66, .20);
+    background: rgba(220, 66, 66, .12);
+    color: #c52f2f;
+  }
+
+  #rdAlertsCentre .rd-ntes-issue {
+    border: 1px solid rgba(220, 66, 66, .22);
+    border-left: 5px solid #dc4242;
+    border-radius: 15px;
+    background: linear-gradient(120deg, rgba(220, 66, 66, .085), rgba(220, 66, 66, .025));
+  }
+
+  #rdAlertsCentre .rd-ntes-issue h4 {
+    color: #c52f2f;
+    font-size: 16px;
+    font-weight: 850;
+  }
+
+  #rdAlertsCentre .rd-ntes-issue-item {
+    border-top-color: rgba(190, 90, 90, .17);
+    line-height: 1.7;
+  }
+
+  #rdAlertsCentre .rd-ntes-info-grid {
+    gap: 12px;
+  }
+
+  #rdAlertsCentre .rd-ntes-info-card {
+    min-width: 0;
+    padding: 18px;
+    border: 1px solid rgba(91, 145, 210, .19);
+    border-radius: 15px;
+    background: var(--card-bg, #fff);
+    box-shadow: 0 5px 17px rgba(18, 48, 85, .045);
+    transition: transform .2s, box-shadow .2s;
+  }
+
+  #rdAlertsCentre .rd-ntes-info-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 9px 22px rgba(18, 48, 85, .09);
+  }
+
+  #rdAlertsCentre .rd-ntes-info-card small {
+    color: #2780c9;
+    font-size: 10px;
+    font-weight: 850;
+    letter-spacing: .65px;
+    text-transform: uppercase;
+  }
+
+  #rdAlertsCentre .rd-ntes-info-card strong {
+    color: var(--text-color, #172b49);
+    font-size: 15px;
+    line-height: 1.5;
+  }
+
+  #rdAlertsCentre .rd-ntes-stations-card {
+    overflow: hidden;
+    padding: 0;
+    border: 1px solid rgba(91, 145, 210, .20);
+    border-radius: 16px;
+    background: var(--card-bg, #fff);
+    box-shadow: 0 6px 20px rgba(18, 48, 85, .045);
+  }
+
+  #rdAlertsCentre .rd-ntes-stations-card .rd-ntes-section-title {
+    padding: 19px 20px;
+    margin: 0;
+    border-bottom: 1px solid rgba(91, 145, 210, .15);
+    color: var(--text-color, #172b49);
+    font-size: 16px;
+  }
+
+  #rdAlertsCentre .rd-ntes-table-wrap {
+    max-width: 100%;
+    overflow-x: auto;
+    scrollbar-width: thin;
+    scrollbar-color: #8baaca transparent;
+  }
+
+  #rdAlertsCentre .rd-ntes-table {
+    min-width: 720px;
+    border-collapse: separate;
+    border-spacing: 0;
+    font-size: 12px;
+  }
+
+  #rdAlertsCentre .rd-ntes-table th {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    padding: 13px 12px;
+    border-bottom: 1px solid rgba(91, 145, 210, .18);
+    background: rgba(37, 117, 201, .075);
+    color: var(--text-color, #24466f);
+    font-size: 10px;
+    font-weight: 850;
+    letter-spacing: .55px;
+    text-transform: uppercase;
+  }
+
+  #rdAlertsCentre .rd-ntes-table td {
+    padding: 13px 12px;
+    border-bottom: 1px solid rgba(120, 150, 190, .13);
+    color: var(--text-color, #263c58);
+  }
+
+  #rdAlertsCentre .rd-ntes-table tbody tr:last-child td {
+    border-bottom: 0;
+  }
+
+  #rdAlertsCentre .rd-ntes-table tbody tr:hover {
+    background: rgba(39, 132, 216, .045);
+  }
+
+  #rdAlertsCentre .rd-ntes-table tr.is-current {
+    background: rgba(39, 132, 216, .10);
+    box-shadow: inset 3px 0 #2784d8;
+  }
+
+  #rdAlertsCentre .rd-ntes-station-name {
+    color: var(--text-color, #172b49);
+    font-size: 12px;
+    font-weight: 800;
+  }
+
+  #rdAlertsCentre .rd-ntes-station-code {
+    font-size: 10px;
+    font-weight: 650;
+  }
+
+  #rdAlertsCentre .rd-ntes-time-main {
+    font-size: 12px;
+  }
+
+  #rdAlertsCentre .rd-ntes-time-label {
+    font-size: 10px;
+  }
+
+  #rdAlertsCentre .rd-ntes-candidates {
+    gap: 10px;
+  }
+
+  #rdAlertsCentre .rd-ntes-candidate {
+    padding: 16px;
+    border: 1px solid rgba(91, 145, 210, .22);
+    border-radius: 13px;
+    background: var(--card-bg, #fff);
+    box-shadow: 0 3px 12px rgba(18, 48, 85, .035);
+    transition: border-color .2s, transform .2s, box-shadow .2s;
+  }
+
+  #rdAlertsCentre .rd-ntes-candidate:hover {
+    border-color: #2784d8;
+    box-shadow: 0 6px 17px rgba(39, 132, 216, .10);
+    transform: translateY(-1px);
+  }
+
+  #rdAlertsCentre .rd-ntes-note {
+    border: 1px solid rgba(91, 145, 210, .17);
+    border-radius: 13px;
+    background: rgba(91, 145, 210, .075);
+    color: var(--text-color, #334b68);
+  }
+
+  #rdAlertsCentre .rd-ntes-provider {
+    padding: 5px 2px;
+  }
+
+  #rdAlertsCentre .rd-ntes-search input,
+  #rdAlertsCentre .rd-ntes-search button,
+  #rdAlertsCentre .rd-ntes-candidate {
+    font-family: inherit;
+  }
+
+  @media (max-width: 700px) {
+    #rdAlertsCentre {
+      padding: 15px;
+      border-radius: 17px;
+    }
+
+    #rdAlertsCentre .rd-ntes-search {
+      grid-template-columns: minmax(0, 1fr);
+      gap: 11px;
+      padding: 15px;
+      border-radius: 14px;
+    }
+
+    #rdAlertsCentre .rd-ntes-search button {
+      width: 100%;
+    }
+
+    #rdAlertsCentre .rd-ntes-train-head {
+      padding: 19px;
+      border-radius: 14px;
+    }
+
+    #rdAlertsCentre .rd-ntes-status-card {
+      align-items: flex-start;
+      padding: 16px;
+    }
+
+    #rdAlertsCentre .rd-ntes-info-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 9px;
+    }
+
+    #rdAlertsCentre .rd-ntes-info-card {
+      padding: 13px;
+    }
+
+    #rdAlertsCentre .rd-ntes-stations-card .rd-ntes-section-title {
+      padding: 15px;
+    }
+
+    #rdAlertsCentre .rd-ntes-issue {
+      padding: 15px;
+    }
+  }
+
+  @media (max-width: 380px) {
+    #rdAlertsCentre .rd-ntes-info-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+`;
+document.head.appendChild(rdNtesPremiumStyle);
+
 
 function rdNtesElement(tag, className, value) {
   const element = document.createElement(tag);
@@ -7782,7 +8781,10 @@ function rdNtesRender() {
     "Train number ya name enter karein. Journey ki start date select karke Search Train dabayein."
   );
 
-  form.append(searchInput, dateInput, button, help);
+  const searchWrap = document.createElement("div");
+  searchWrap.className = "rd-autocomplete-wrap";
+  searchWrap.appendChild(searchInput);
+  form.append(searchWrap, dateInput, button, help);
 
   form.addEventListener("submit", event => {
     event.preventDefault();
@@ -7790,6 +8792,22 @@ function rdNtesRender() {
   });
 
   feed.appendChild(form);
+
+  rdAttachAutocomplete(searchInput, {
+    endpoint: query => `/api/train/search?q=${encodeURIComponent(query)}&limit=8`,
+    items: payload => Array.isArray(payload.data) ? payload.data : [],
+    label: item => [
+      item.number || item.trainNumber || "",
+      item.name || item.trainName || ""
+    ].filter(Boolean).join(" — ") || "Train",
+    description: item => [
+      item.sourceName || item.source || "",
+      item.destName || item.destination || item.dest || ""
+    ].filter(Boolean).join(" → "),
+    value: item => String(item.number || item.trainNumber || ""),
+    onSelect: () => rdNtesRunSearch(searchInput.value, dateInput.value)
+  });
+
 
   const results = document.createElement("div");
   results.className = "rd-ntes-panel";

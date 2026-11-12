@@ -1,4 +1,12 @@
-import { configure, checkPNRStatus } from "railkit";
+import {
+  configure,
+  checkPNRStatus,
+  stationByCode,
+  stationAmenities,
+  stationsByName,
+  trainByNumber,
+  trainsByName
+} from "railkit";
 
 let configuredKey = null;
 
@@ -18,4 +26,31 @@ function ensureRailKitConfigured() {
 export async function railkitPnr(pnr) {
   ensureRailKitConfigured();
   return await checkPNRStatus(pnr);
+}
+
+
+// RailKit Lookup API wrappers
+export async function railkitStationByCode(code) {
+  ensureRailKitConfigured();
+  return await stationByCode(code);
+}
+
+export async function railkitStationAmenities(code) {
+  ensureRailKitConfigured();
+  return await stationAmenities(code);
+}
+
+export async function railkitStationsByName(name) {
+  ensureRailKitConfigured();
+  return await stationsByName(name);
+}
+
+export async function railkitTrainByNumber(number) {
+  ensureRailKitConfigured();
+  return await trainByNumber(number);
+}
+
+export async function railkitTrainsByName(name) {
+  ensureRailKitConfigured();
+  return await trainsByName(name);
 }

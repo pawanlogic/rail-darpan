@@ -5,7 +5,14 @@ import path from "path";
 import { fileURLToPath } from "url";
 import dotenv from "dotenv";
 import { railradar } from "./providers/railradar.js";
-import { railkitPnr } from "./providers/railkit.js";
+import {
+  railkitPnr,
+  railkitStationByCode,
+  railkitStationAmenities,
+  railkitStationsByName,
+  railkitTrainByNumber,
+  railkitTrainsByName
+} from "./providers/railkit.js";
 import { providerCache, getProviderCacheStats } from "./provider-cache.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -68,6 +75,83 @@ app.get("/api/pnr/:pnr", async (req, res) => {
     res.json(data);
   } catch (error) {
     handleError(res, error);
+  }
+});
+
+
+// RailKit Lookup APIs
+
+app.get("/api/lookup/station/:code", async (req, res) => {
+  const code = String(req.params.code || "").trim().toUpperCase();
+
+  if (!/^[A-Z0-9]{2,10}$/.test(code)) {
+    return res.status(400).json({ error: "Enter a valid station code." });
+  }
+
+  try {
+    return res.json(await railkitStationByCode(code));
+  } catch (error) {
+    return handleError(res, error);
+  }
+});
+
+app.get("/api/lookup/station/:code/amenities", async (req, res) => {
+  const code = String(req.params.code || "").trim().toUpperCase();
+
+  if (!/^[A-Z0-9]{2,10}$/.test(code)) {
+    return res.status(400).json({ error: "Enter a valid station code." });
+  }
+
+  try {
+    return res.json(await railkitStationAmenities(code));
+  } catch (error) {
+    return handleError(res, error);
+  }
+});
+
+app.get("/api/lookup/stations", async (req, res) => {
+  const name = String(req.query.name || "").trim();
+
+  if (name.length < 2 || name.length > 100) {
+    return res.status(400).json({
+      error: "Enter a station name between 2 and 100 characters."
+    });
+  }
+
+  try {
+    return res.json(await railkitStationsByName(name));
+  } catch (error) {
+    return handleError(res, error);
+  }
+});
+
+app.get("/api/lookup/train/:number", async (req, res) => {
+  const number = String(req.params.number || "").trim();
+
+  if (!/^\d{1,10}$/.test(number)) {
+    return res.status(400).json({ error: "Enter a valid train number." });
+  }
+
+  try {
+    return res.json(await railkitTrainByNumber(number));
+  } catch (error) {
+    return handleError(res, error);
+  }
+});
+
+app.get("/api/lookup/trains", async (req, res) => {
+  const name = String(req.query.name || "").trim();
+
+  if (name.length < 2 || name.length > 100) {
+    return res.status(400).json({
+      error: "Enter a train name between 2 and 100 characters."
+    });
+  }
+
+  try {
+    return res.json(await railkitTrainsByName(name));
+  } catch (error) {
+    return handleError(res, error);
   }
 });
 

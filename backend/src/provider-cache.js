@@ -101,6 +101,54 @@ let match = path.match(/^\/api\/train\/(\d+)\/live$/);
     };
   }
 
+  // RailKit lookup cache policies
+  let lookupMatch = path.match(/^\/api\/lookup\/station\/([A-Z0-9]+)\/amenities$/i);
+  if (lookupMatch) {
+    return {
+      key: `railkit-station-amenities:${lookupMatch[1].toUpperCase()}`,
+      ttl: 7 * DAY,
+      stale: 30 * DAY
+    };
+  }
+
+  lookupMatch = path.match(/^\/api\/lookup\/station\/([A-Z0-9]+)$/i);
+  if (lookupMatch) {
+    return {
+      key: `railkit-station:${lookupMatch[1].toUpperCase()}`,
+      ttl: 30 * DAY,
+      stale: 30 * DAY
+    };
+  }
+
+  if (path === "/api/lookup/stations") {
+    const name = String(req.query.name || "").trim().toLowerCase();
+    if (name.length < 2) return null;
+    return {
+      key: `railkit-stations-name:${name}`,
+      ttl: DAY,
+      stale: 7 * DAY
+    };
+  }
+
+  lookupMatch = path.match(/^\/api\/lookup\/train\/(\d+)$/);
+  if (lookupMatch) {
+    return {
+      key: `railkit-train-number:${lookupMatch[1]}`,
+      ttl: DAY,
+      stale: 7 * DAY
+    };
+  }
+
+  if (path === "/api/lookup/trains") {
+    const name = String(req.query.name || "").trim().toLowerCase();
+    if (name.length < 2) return null;
+    return {
+      key: `railkit-trains-name:${name}`,
+      ttl: DAY,
+      stale: 7 * DAY
+    };
+  }
+
   if (path === "/api/alerts") {
     return {
       key: "railway-alerts:all",
