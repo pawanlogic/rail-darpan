@@ -2157,6 +2157,17 @@ function renderCompactLiveStatus(data, payload, panel) {
         overflow-wrap: anywhere;
       }
 
+      .live-result-panel h4 {
+        color: #ffffff !important;
+      }
+
+      .live-result-panel .live-v3-head .live-v3-title,
+      .live-result-panel .live-v3-head h3,
+      .live-result-panel .live-v3-head h4,
+      .live-result-panel .live-v3-head .live-v3-subtitle {
+        color: #ffffff !important;
+      }
+
       .live-result-panel .live-v3-head {
         align-items: center;
         gap: 12px;
