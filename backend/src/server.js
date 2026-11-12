@@ -5,6 +5,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 import dotenv from "dotenv";
 import { railradar } from "./providers/railradar.js";
+import { railkitPnr } from "./providers/railkit.js";
 import { providerCache, getProviderCacheStats } from "./provider-cache.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -39,6 +40,10 @@ app.get("/api/health", (req, res) => {
     ok: true,
     service: "Rail Darpan API",
     providerConfigured: Boolean(API_KEY),
+    providers: {
+      railradar: Boolean(API_KEY),
+      railkit: Boolean(process.env.RAILKIT_API_KEY)
+    },
     cache: getProviderCacheStats()
   });
 });
@@ -59,7 +64,7 @@ app.get("/api/pnr/:pnr", async (req, res) => {
   }
 
   try {
-    const data = await railradar.pnr(req.params.pnr, API_KEY);
+    const data = await railkitPnr(req.params.pnr);
     res.json(data);
   } catch (error) {
     handleError(res, error);
