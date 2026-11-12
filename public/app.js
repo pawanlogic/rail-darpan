@@ -4578,6 +4578,368 @@ if (rdClearRecentButton) {
   });
 }
 
+function renderCompactPnr(payload, panel) {
+  const data = payload && typeof payload === "object" ? payload : {};
+  const train = data.train || {};
+  const journey = data.journey || {};
+  const booking = data.booking || {};
+  const chart = data.chart || {};
+  const passengers = Array.isArray(data.passengers) ? data.passengers : [];
+
+  const style = document.createElement("style");
+  style.textContent = `
+    .rd-pnr-wrap { display:grid; gap:16px; margin-top:14px; color:var(--text-color,inherit); }
+    .rd-pnr-hero { position:relative; overflow:hidden; padding:20px; border-radius:17px; background:linear-gradient(120deg,#102b50,#174b79 65%,#176c87); color:#fff; box-shadow:0 9px 25px rgba(10,45,80,.18); }
+    .rd-pnr-hero:after { content:""; position:absolute; width:190px; height:190px; border:1px solid rgba(255,255,255,.12); border-radius:50%; right:-55px; top:-85px; box-shadow:0 0 0 22px rgba(255,255,255,.035),0 0 0 45px rgba(255,255,255,.025); pointer-events:none; }
+    .rd-pnr-hero-top { display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; position:relative; z-index:1; }
+    .rd-pnr-eyebrow { font-size:11px; letter-spacing:1.6px; text-transform:uppercase; opacity:.76; font-weight:700; }
+    .rd-pnr-number { font-size:25px; font-weight:800; letter-spacing:1px; margin-top:5px; }
+    .rd-pnr-badge { display:inline-flex; align-items:center; gap:6px; border-radius:30px; padding:7px 11px; font-size:11px; font-weight:750; background:rgba(255,255,255,.15); border:1px solid rgba(255,255,255,.2); }
+    .rd-pnr-train { margin-top:19px; padding-top:15px; border-top:1px solid rgba(255,255,255,.18); position:relative; z-index:1; }
+    .rd-pnr-train-name { font-size:19px; font-weight:750; line-height:1.35; }
+    .rd-pnr-train-meta { display:flex; flex-wrap:wrap; gap:8px 17px; margin-top:7px; font-size:12px; opacity:.83; }
+    .rd-pnr-route { padding:18px; border:1px solid var(--border-color,rgba(127,127,127,.2)); border-radius:16px; background:var(--card-bg,rgba(127,127,127,.045)); }
+    .rd-pnr-route-title { font-size:13px; font-weight:750; margin-bottom:17px; }
+    .rd-pnr-route-track { display:grid; grid-template-columns:minmax(0,1fr) 90px minmax(0,1fr); align-items:center; gap:8px; }
+    .rd-pnr-station:last-child { text-align:right; }
+    .rd-pnr-station-code { font-size:23px; font-weight:850; letter-spacing:.3px; }
+    .rd-pnr-station-name { font-size:12px; font-weight:650; margin-top:4px; overflow-wrap:anywhere; }
+    .rd-pnr-station-caption { font-size:10px; opacity:.65; margin-top:4px; }
+    .rd-pnr-track { display:flex; align-items:center; color:#2387d1; gap:4px; }
+    .rd-pnr-track-line { height:2px; flex:1; background:linear-gradient(90deg,#2387d1,#35a9a0); position:relative; }
+    .rd-pnr-track-line:before,.rd-pnr-track-line:after { content:""; position:absolute; width:7px; height:7px; border-radius:50%; background:#2387d1; top:-3px; }
+    .rd-pnr-track-line:before { left:0; }
+    .rd-pnr-track-line:after { right:0; background:#35a9a0; }
+    .rd-pnr-track-icon { font-size:17px; }
+    .rd-pnr-route-meta { display:flex; flex-wrap:wrap; gap:8px 18px; margin-top:17px; padding-top:12px; border-top:1px solid var(--border-color,rgba(127,127,127,.15)); font-size:11px; opacity:.75; }
+    .rd-pnr-section { border:1px solid var(--border-color,rgba(127,127,127,.2)); border-radius:16px; padding:16px; background:var(--card-bg,rgba(127,127,127,.035)); min-width:0; }
+    .rd-pnr-section-head { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:13px; }
+    .rd-pnr-section-title { font-size:14px; font-weight:800; }
+    .rd-pnr-section-sub { font-size:11px; opacity:.62; margin-top:3px; }
+    .rd-pnr-count { font-size:11px; font-weight:750; padding:5px 9px; border-radius:20px; background:rgba(35,135,209,.12); color:#2786ca; }
+    .rd-pnr-passengers { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:10px; }
+    .rd-pnr-passenger { border:1px solid var(--border-color,rgba(127,127,127,.17)); border-radius:12px; padding:13px; background:var(--card-bg,rgba(127,127,127,.055)); min-width:0; }
+    .rd-pnr-passenger-top { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:11px; }
+    .rd-pnr-passenger-name { font-size:12px; font-weight:800; }
+    .rd-pnr-status { font-size:10px; font-weight:750; border-radius:20px; padding:5px 8px; background:rgba(22,163,74,.12); color:#15934c; overflow-wrap:anywhere; }
+    .rd-pnr-status.pending { background:rgba(217,145,25,.13); color:#c18419; }
+    .rd-pnr-status.cancelled { background:rgba(220,65,65,.12); color:#d34c4c; }
+    .rd-pnr-passenger-info { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+    .rd-pnr-info-label { font-size:10px; opacity:.62; margin-bottom:4px; }
+    .rd-pnr-info-value { font-size:12px; font-weight:700; overflow-wrap:anywhere; }
+    .rd-pnr-booking-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(130px,1fr)); gap:9px; }
+    .rd-pnr-booking-item { padding:12px; border-radius:11px; background:var(--card-bg,rgba(127,127,127,.07)); border:1px solid var(--border-color,rgba(127,127,127,.13)); }
+    .rd-pnr-booking-label { font-size:10px; opacity:.65; margin-bottom:6px; }
+    .rd-pnr-booking-value { font-size:14px; font-weight:800; overflow-wrap:anywhere; }
+    .rd-pnr-empty { font-size:12px; opacity:.65; margin:0; }
+    .rd-pnr-extra { font-size:13px; }
+    .rd-pnr-extra summary { cursor:pointer; font-weight:750; }
+    .rd-pnr-extra-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(130px,1fr)); gap:9px; margin-top:13px; }
+    .rd-pnr-extra-item { padding:10px; border-radius:9px; background:var(--card-bg,rgba(127,127,127,.06)); overflow-wrap:anywhere; }
+    @media(max-width:520px) {
+      .rd-pnr-hero { padding:16px; }
+      .rd-pnr-number { font-size:22px; }
+      .rd-pnr-train-name { font-size:16px; }
+      .rd-pnr-route { padding:13px; }
+      .rd-pnr-route-track { grid-template-columns:minmax(0,1fr) 52px minmax(0,1fr); gap:5px; }
+      .rd-pnr-station-code { font-size:19px; }
+      .rd-pnr-station-name { font-size:10px; }
+      .rd-pnr-section { padding:13px; }
+      .rd-pnr-passengers { grid-template-columns:1fr; }
+    }
+  `;
+  panel.appendChild(style);
+
+  const wrap = document.createElement("div");
+  wrap.className = "rd-pnr-wrap";
+
+  function read(obj, keys) {
+    for (const key of keys) {
+      const value = obj && obj[key];
+      if (value !== undefined && value !== null && value !== "") return value;
+    }
+    return "";
+  }
+
+  function display(value) {
+    if (value === null || value === undefined || value === "") return "—";
+    if (typeof value === "object") {
+      return read(value, ["name", "stationName", "code", "value", "status"]) || "—";
+    }
+    return String(value);
+  }
+
+  function stationName(value) {
+    if (value && typeof value === "object") {
+      return display(read(value, ["name", "stationName", "station_name"])) || display(value);
+    }
+    return display(value);
+  }
+
+  function stationCode(value) {
+    if (value && typeof value === "object") {
+      return display(read(value, ["code", "stationCode", "station_code"])) || "—";
+    }
+    return "—";
+  }
+
+  function section(title, subtitle, count) {
+    const node = document.createElement("section");
+    node.className = "rd-pnr-section";
+    const head = document.createElement("div");
+    head.className = "rd-pnr-section-head";
+    const left = document.createElement("div");
+    const heading = document.createElement("div");
+    heading.className = "rd-pnr-section-title";
+    heading.textContent = title;
+    left.appendChild(heading);
+    if (subtitle) {
+      const sub = document.createElement("div");
+      sub.className = "rd-pnr-section-sub";
+      sub.textContent = subtitle;
+      left.appendChild(sub);
+    }
+    head.appendChild(left);
+    if (count) {
+      const badge = document.createElement("span");
+      badge.className = "rd-pnr-count";
+      badge.textContent = count;
+      head.appendChild(badge);
+    }
+    node.appendChild(head);
+    return node;
+  }
+
+  function bookingItem(container, label, value) {
+    if (value === "" || value === null || value === undefined) return;
+    const item = document.createElement("div");
+    item.className = "rd-pnr-booking-item";
+    const name = document.createElement("div");
+    name.className = "rd-pnr-booking-label";
+    name.textContent = label;
+    const val = document.createElement("div");
+    val.className = "rd-pnr-booking-value";
+    val.textContent = display(value);
+    item.append(name, val);
+    container.appendChild(item);
+  }
+
+  const pnr = read(data, ["pnr", "pnrNumber", "pnr_number"]);
+  const trainNumber = read(train, ["number", "trainNumber", "train_number"]);
+  const trainName = read(train, ["name", "trainName", "train_name"]);
+  const journeyDate = read(journey, ["dateOfJourney", "journeyDate", "date"]);
+  const chartStatus = read(chart, ["status", "chartStatus", "message"]);
+  const chartText = display(chartStatus || "Status unavailable");
+
+  const hero = document.createElement("div");
+  hero.className = "rd-pnr-hero";
+
+  const heroTop = document.createElement("div");
+  heroTop.className = "rd-pnr-hero-top";
+
+  const pnrBlock = document.createElement("div");
+  const eyebrow = document.createElement("div");
+  eyebrow.className = "rd-pnr-eyebrow";
+  eyebrow.textContent = "Passenger Name Record";
+  const number = document.createElement("div");
+  number.className = "rd-pnr-number";
+  number.textContent = pnr ? "PNR " + display(pnr) : "PNR Status";
+  pnrBlock.append(eyebrow, number);
+
+  const chartBadge = document.createElement("div");
+  chartBadge.className = "rd-pnr-badge";
+  chartBadge.textContent = "● " + chartText;
+  heroTop.append(pnrBlock, chartBadge);
+
+  const trainBlock = document.createElement("div");
+  trainBlock.className = "rd-pnr-train";
+  const trainTitle = document.createElement("div");
+  trainTitle.className = "rd-pnr-train-name";
+  trainTitle.textContent = [trainNumber, trainName].filter(Boolean).join("  ·  ") || "Train information";
+  const trainMeta = document.createElement("div");
+  trainMeta.className = "rd-pnr-train-meta";
+
+  [journeyDate ? "Journey: " + display(journeyDate) : "", read(journey, ["class", "travelClass"]) ? "Class: " + display(read(journey, ["class", "travelClass"])) : "", read(journey, ["quota"]) ? "Quota: " + display(journey.quota) : ""].filter(Boolean).forEach(item => {
+    const span = document.createElement("span");
+    span.textContent = item;
+    trainMeta.appendChild(span);
+  });
+
+  trainBlock.append(trainTitle, trainMeta);
+  hero.append(heroTop, trainBlock);
+  wrap.appendChild(hero);
+
+  const source = read(journey, ["source", "from", "boardingStation"]);
+  const destination = read(journey, ["destination", "to", "destinationStation"]);
+  const boarding = read(journey, ["boardingPoint", "boarding"]);
+
+  const route = document.createElement("section");
+  route.className = "rd-pnr-route";
+  const routeTitle = document.createElement("div");
+  routeTitle.className = "rd-pnr-route-title";
+  routeTitle.textContent = "Journey Route";
+
+  const track = document.createElement("div");
+  track.className = "rd-pnr-route-track";
+
+  function stationBlock(value, caption) {
+    const block = document.createElement("div");
+    block.className = "rd-pnr-station";
+    const code = document.createElement("div");
+    code.className = "rd-pnr-station-code";
+    code.textContent = stationCode(value);
+    const name = document.createElement("div");
+    name.className = "rd-pnr-station-name";
+    name.textContent = stationName(value);
+    const note = document.createElement("div");
+    note.className = "rd-pnr-station-caption";
+    note.textContent = caption;
+    block.append(code, name, note);
+    return block;
+  }
+
+  const routeMiddle = document.createElement("div");
+  routeMiddle.className = "rd-pnr-track";
+  const line = document.createElement("div");
+  line.className = "rd-pnr-track-line";
+  const trainIcon = document.createElement("span");
+  trainIcon.className = "rd-pnr-track-icon";
+  trainIcon.textContent = "🚆";
+  routeMiddle.append(line, trainIcon, line.cloneNode());
+
+  track.append(
+    stationBlock(source, "FROM"),
+    routeMiddle,
+    stationBlock(destination, "TO")
+  );
+  route.append(routeTitle, track);
+
+  const routeMeta = document.createElement("div");
+  routeMeta.className = "rd-pnr-route-meta";
+  [
+    boarding ? "Boarding: " + stationName(boarding) : "",
+    journey.distance !== undefined && journey.distance !== null ? "Distance: " + journey.distance + " km" : "",
+    read(journey, ["arrivalDate"]) ? "Arrival: " + display(journey.arrivalDate) : ""
+  ].filter(Boolean).forEach(item => {
+    const span = document.createElement("span");
+    span.textContent = item;
+    routeMeta.appendChild(span);
+  });
+  if (routeMeta.children.length) route.appendChild(routeMeta);
+  if (source || destination) wrap.appendChild(route);
+
+  const passengerSection = section(
+    "Passenger Status",
+    "Booking and current reservation details",
+    passengers.length ? passengers.length + " Passenger" + (passengers.length > 1 ? "s" : "") : ""
+  );
+
+  if (passengers.length) {
+    const cards = document.createElement("div");
+    cards.className = "rd-pnr-passengers";
+
+    passengers.forEach((person, index) => {
+      const card = document.createElement("article");
+      card.className = "rd-pnr-passenger";
+
+      const top = document.createElement("div");
+      top.className = "rd-pnr-passenger-top";
+
+      const passengerName = document.createElement("div");
+      passengerName.className = "rd-pnr-passenger-name";
+      passengerName.textContent = "Passenger " + (index + 1);
+
+      const statusValue = read(person, ["currentStatus", "current_status", "current", "status", "bookingStatus", "booking_status"]);
+      const status = document.createElement("span");
+      status.className = "rd-pnr-status";
+      status.textContent = display(statusValue || "Status unavailable");
+
+      if (/wait|wl|rac|pending/i.test(String(statusValue))) status.classList.add("pending");
+      if (/cancel/i.test(String(statusValue))) status.classList.add("cancelled");
+
+      top.append(passengerName, status);
+
+      const info = document.createElement("div");
+      info.className = "rd-pnr-passenger-info";
+
+      [
+        ["Booking", read(person, ["bookingStatus", "booking_status", "booking"])],
+        ["Current", read(person, ["currentStatus", "current_status", "current"])],
+        ["Coach", read(person, ["coach", "coachNumber", "coach_number"])],
+        ["Berth / Seat", read(person, ["berth", "berthNumber", "berth_number", "seatNumber", "seat_number"])]
+      ].forEach(([label, value]) => {
+        if (value === "" || value === null || value === undefined) return;
+        const item = document.createElement("div");
+        const itemLabel = document.createElement("div");
+        itemLabel.className = "rd-pnr-info-label";
+        itemLabel.textContent = label;
+        const itemValue = document.createElement("div");
+        itemValue.className = "rd-pnr-info-value";
+        itemValue.textContent = display(value);
+        item.append(itemLabel, itemValue);
+        info.appendChild(item);
+      });
+
+      card.append(top, info);
+      cards.appendChild(card);
+    });
+
+    passengerSection.appendChild(cards);
+  } else {
+    const empty = document.createElement("p");
+    empty.className = "rd-pnr-empty";
+    empty.textContent = "Passenger details are not available in this response.";
+    passengerSection.appendChild(empty);
+  }
+  wrap.appendChild(passengerSection);
+
+  const bookingSection = section("Booking Details", "Ticket and fare information");
+  const bookingGrid = document.createElement("div");
+  bookingGrid.className = "rd-pnr-booking-grid";
+
+  bookingItem(bookingGrid, "Total Fare", booking.fare);
+  bookingItem(bookingGrid, "Ticket Fare", booking.ticketFare);
+  bookingItem(bookingGrid, "Booking Date", booking.bookingDate);
+  bookingItem(bookingGrid, "Booking Status", read(booking, ["status", "bookingStatus"]));
+
+  if (bookingGrid.children.length) {
+    bookingSection.appendChild(bookingGrid);
+    wrap.appendChild(bookingSection);
+  }
+
+  const knownKeys = ["pnr", "pnrNumber", "pnr_number", "train", "journey", "chart", "booking", "passengers"];
+  const extraKeys = Object.keys(data).filter(key => !knownKeys.includes(key));
+
+  if (extraKeys.length) {
+    const details = document.createElement("details");
+    details.className = "rd-pnr-section rd-pnr-extra";
+    const summary = document.createElement("summary");
+    summary.textContent = "Additional Details";
+    details.appendChild(summary);
+
+    const grid = document.createElement("div");
+    grid.className = "rd-pnr-extra-grid";
+
+    extraKeys.forEach(key => {
+      const item = document.createElement("div");
+      item.className = "rd-pnr-extra-item";
+      const label = document.createElement("div");
+      label.className = "rd-pnr-info-label";
+      label.textContent = key;
+      const value = document.createElement("div");
+      value.className = "rd-pnr-info-value";
+      value.textContent = display(data[key]);
+      item.append(label, value);
+      grid.appendChild(item);
+    });
+
+    details.appendChild(grid);
+    wrap.appendChild(details);
+  }
+
+  panel.appendChild(wrap);
+}
+
 function renderResult(data) {
   result.replaceChildren();
 
@@ -4612,6 +4974,8 @@ function renderResult(data) {
     renderCompactLiveStatus(data, payload, panel);
   } else if (currentMode === "schedule") {
     renderCompactScheduleV2(payload, panel);
+  } else if (currentMode === "pnr") {
+    renderCompactPnr(payload, panel);
   } else {
     addText(
       panel,
@@ -4625,7 +4989,6 @@ function renderResult(data) {
   rdAddTrainFavouriteControl(panel, trainIdentity);
   result.appendChild(panel);
 }
-const officialPnrUrl = atob("aHR0cHM6Ly93d3cuaW5kaWFucmFpbC5nb3YuaW4vZW5xdWlyeS9QTlIvUG5yRW5xdWlyeS5odG1sP2xvY2FsZT1lbg==");
 
 const pnrHistoryKey = "raildarpan_pnr_history";
 const pnrHistoryList = document.getElementById("pnrHistoryList");
@@ -4704,30 +5067,18 @@ form.addEventListener("submit", async event => {
     return;
   }
 
-  if (currentMode === "pnr") {
-    savePnrHistory(value);
-
-    const officialTab = window.open(officialPnrUrl, "_blank");
-    if (officialTab) officialTab.opener = null;
-    result.replaceChildren();
-    addText(
-      result,
-      "p",
-      "PNR search saved in this browser's history. The official Indian Railways PNR page has been opened in a new tab. Enter your PNR there to view its current status.",
-      "result-success"
-    );
-    return;
-  }
-
-  if (!/^\d{1,10}$/.test(value)) {
+  if (currentMode !== "pnr" && !/^\d{1,10}$/.test(value)) {
     result.replaceChildren();
     addText(result, "p", "Please enter a valid train number.", "result-error");
     return;
   }
 
-  let endpoint = "";
-  if (currentMode === "live") endpoint = `/api/train/${value}/live`;
-  if (currentMode === "schedule") endpoint = `/api/train/${value}/schedule`;
+  const endpoint =
+    currentMode === "pnr"
+      ? `/api/pnr/${encodeURIComponent(value)}`
+      : currentMode === "live"
+        ? `/api/train/${encodeURIComponent(value)}/live`
+        : `/api/train/${encodeURIComponent(value)}/schedule`;
 
   const button = document.getElementById("searchButton");
   button.disabled = true;
@@ -4744,7 +5095,7 @@ form.addEventListener("submit", async event => {
     }
 
     renderResult(data);
-    rdShowProviderCacheNotice(result, response);
+    if (currentMode !== "pnr") rdShowProviderCacheNotice(result, response);
   } catch (error) {
     result.replaceChildren();
     addText(result, "p", error.message || "Unable to retrieve railway information.", "result-error");
