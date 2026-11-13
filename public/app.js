@@ -5491,8 +5491,7 @@ function renderResult(data) {
 }
 
 function getPnrHistoryKey() {
-  const user = window.RailDarpanAuth?.currentUser;
-  return user?.uid ? "raildarpan_pnr_history_" + user.uid : null;
+  return "raildarpan_pnr_history_public";
 }
 const pnrHistoryList = document.getElementById("pnrHistoryList");
 const clearPnrHistoryButton = document.getElementById("clearPnrHistory");
@@ -5563,10 +5562,6 @@ if (clearPnrHistoryButton) {
 }
 
 renderPnrHistory();
-
-document.addEventListener("railDarpanAuthChanged", () => {
-  renderPnrHistory();
-});
 
 form.addEventListener("submit", async event => {
   event.preventDefault();
