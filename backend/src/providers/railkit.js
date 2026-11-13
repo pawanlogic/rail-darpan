@@ -1,11 +1,16 @@
 import {
   configure,
   checkPNRStatus,
+  trackTrain,
   stationByCode,
   stationAmenities,
   stationsByName,
   trainByNumber,
-  trainsByName
+  trainsByName,
+  getTrainInfo,
+  searchTrainBetweenStations,
+  liveAtStation,
+  cancelList
 } from "railkit";
 
 let configuredKey = null;
@@ -26,6 +31,11 @@ function ensureRailKitConfigured() {
 export async function railkitPnr(pnr) {
   ensureRailKitConfigured();
   return await checkPNRStatus(pnr);
+}
+
+export async function railkitTrackTrain(number, date) {
+  ensureRailKitConfigured();
+  return await trackTrain(number, date);
 }
 
 
@@ -53,4 +63,25 @@ export async function railkitTrainByNumber(number) {
 export async function railkitTrainsByName(name) {
   ensureRailKitConfigured();
   return await trainsByName(name);
+}
+
+
+export async function railkitGetTrainInfo(number) {
+  ensureRailKitConfigured();
+  return await getTrainInfo(number);
+}
+
+export async function railkitSearchTrainBetweenStations(from, to, date) {
+  ensureRailKitConfigured();
+  return await searchTrainBetweenStations(from, to, date);
+}
+
+export async function railkitLiveAtStation(code, hours) {
+  ensureRailKitConfigured();
+  return await liveAtStation(code, hours);
+}
+
+export async function railkitCancelList() {
+  ensureRailKitConfigured();
+  return await cancelList();
 }

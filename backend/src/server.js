@@ -4,14 +4,18 @@ import cors from "cors";
 import path from "path";
 import { fileURLToPath } from "url";
 import dotenv from "dotenv";
-import { railradar } from "./providers/railradar.js";
 import {
   railkitPnr,
+  railkitTrackTrain,
   railkitStationByCode,
   railkitStationAmenities,
   railkitStationsByName,
   railkitTrainByNumber,
-  railkitTrainsByName
+  railkitTrainsByName,
+  railkitGetTrainInfo,
+  railkitSearchTrainBetweenStations,
+  railkitLiveAtStation,
+  railkitCancelList
 } from "./providers/railkit.js";
 import { providerCache, getProviderCacheStats } from "./provider-cache.js";
 const __filename = fileURLToPath(import.meta.url);
@@ -21,8 +25,6 @@ dotenv.config({ path: path.resolve(__dirname, "../.env") });
 
 const app = express();
 const PORT = process.env.PORT || 5000;
-const API_KEY = process.env.RAILRADAR_API_KEY;
-
 app.use(express.json());
 app.use(cors());
 
@@ -47,7 +49,6 @@ app.get("/api/health", (req, res) => {
     service: "Rail Darpan API",
     providerConfigured: Boolean(API_KEY),
     providers: {
-      railradar: Boolean(API_KEY),
       railkit: Boolean(process.env.RAILKIT_API_KEY)
     },
     cache: getProviderCacheStats()
@@ -160,18 +161,85 @@ app.get("/api/lookup/trains", async (req, res) => {
 
 // Live train status
 app.get("/api/train/:number/live", async (req, res) => {
-  const number = req.params.number;
+  const number = String(req.params.number || "").trim();
 
-  if (!/^\d{1,10}$/.test(number)) {
-    return res.status(400).json({ error: "Invalid train number" });
+  if (!/^\d{5}$/.test(number)) {
+    return res.status(400).json({ error: "Enter a valid 5-digit train number." });
   }
 
   try {
-    const date = req.query.date || new Date().toISOString().slice(0, 10);
-    const data = await railradar.liveTrain(number, date, API_KEY);
-    res.json(data);
+    const parts = new Intl.DateTimeFormat("en-CA", {
+      timeZone: "Asia/Kolkata",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit"
+    }).formatToParts(new Date());
+
+    const today = Object.fromEntries(parts.map(p => [p.type, p.value]));
+    const requestedDate = String(
+      req.query.date || `${today.year}-${today.month}-${today.day}`
+    ).trim();
+
+    let railkitDate;
+
+    if (/^\d{4}-\d{2}-\d{2}$/.test(requestedDate)) {
+      const [year, month, day] = requestedDate.split("-");
+      const parsed = new Date(`${requestedDate}T00:00:00Z`);
+
+      if (
+        Number.isNaN(parsed.getTime()) ||
+        parsed.toISOString().slice(0, 10) !== requestedDate
+      ) {
+        return res.status(400).json({ error: "Invalid journey date." });
+      }
+
+      railkitDate = `${day}-${month}-${year}`;
+    } else if (/^\d{2}-\d{2}-\d{4}$/.test(requestedDate)) {
+      railkitDate = requestedDate;
+    } else {
+      return res.status(400).json({ error: "Date must be YYYY-MM-DD." });
+    }
+
+    const result = await railkitTrackTrain(number, railkitDate);
+
+    if (!result || result.success === false) {
+      return res.status(502).json(
+        result || { success: false, error: "Live train data unavailable." }
+      );
+    }
+
+    const live = result.data || {};
+    const timeline = Array.isArray(live.timeline) ? live.timeline : [];
+
+    const currentIndex = timeline.findIndex(stop =>
+      stop.status === "current" ||
+      (live.currentStationCode && stop.stationCode === live.currentStationCode)
+    );
+
+    const currentPoint = currentIndex >= 0 ? timeline[currentIndex] : null;
+    const nextPoint = timeline
+      .slice(currentIndex >= 0 ? currentIndex + 1 : 0)
+      .find(stop => stop.status === "upcoming") || null;
+
+    const normalizedData = {
+      ...live,
+      trainNumber: live.trainNo || number,
+      status: live.statusNote || live.progress?.journeyStatus || "",
+      runningStatus: live.statusNote || live.progress?.journeyStatus || "",
+      currentLocation: currentPoint?.stationName || "",
+      currentStation: currentPoint?.stationName || "",
+      currentStationCode: live.currentStationCode || currentPoint?.stationCode || "",
+      speed: live.averageSpeedKmph ?? null,
+      nextStation: nextPoint?.stationName || "",
+      sourceStation: timeline[0]?.stationName || "",
+      destinationStation: timeline[timeline.length - 1]?.stationName || "",
+      route: timeline,
+      updatedAt: live.lastUpdate || null
+    };
+
+    return res.json({ ...result, data: normalizedData });
   } catch (error) {
-    handleError(res, error);
+    return handleError(res, error);
   }
 });
 
@@ -189,7 +257,16 @@ app.get("/api/train/search", async (req, res) => {
 
   try {
     const limit = Math.min(50, Math.max(1, Number(req.query.limit) || 10));
-    const data = await railradar.trainSearch(query, limit, API_KEY);
+    let data;
+    if (/^\d+$/.test(query)) {
+      data = await railkitTrainByNumber(query);
+    } else {
+      data = await railkitTrainsByName(query);
+    }
+    if (Array.isArray(data?.data)) {
+      data = { ...data, data: data.data.slice(0, limit) };
+    }
+    res.json(data);
     res.json(data);
   } catch (error) {
     handleError(res, error);
@@ -203,7 +280,7 @@ app.get("/api/train/:number/schedule", async (req, res) => {
   }
 
   try {
-    const data = await railradar.schedule(req.params.number, API_KEY);
+    const data = await railkitGetTrainInfo(req.params.number);
     res.json(data);
   } catch (error) {
     handleError(res, error);
@@ -221,7 +298,7 @@ app.get("/api/stations/search", async (req, res) => {
   }
 
   try {
-    const data = await railradar.stationSearch(query, 10, API_KEY);
+    const data = await railkitStationsByName(query);
     res.json(data);
   } catch (error) {
     handleError(res, error);
@@ -265,7 +342,7 @@ app.get("/api/trains/between", async (req, res) => {
   }
 
   try {
-    const data = await railradar.between(from, to, date, API_KEY);
+    const data = await railkitSearchTrainBetweenStations(from, to, date);
     return res.json(data);
   } catch (error) {
     handleError(res, error);
@@ -281,8 +358,9 @@ app.get("/api/station/:code/live", async (req, res) => {
   }
 
   try {
-    const hours = Math.min(24, Math.max(1, Number(req.query.hours) || 4));
-    const data = await railradar.stationLive(code, hours, API_KEY);
+    const requestedHours = Math.min(24, Math.max(1, Number(req.query.hours) || 4));
+    const hours = requestedHours <= 2 ? 2 : requestedHours <= 4 ? 4 : 8;
+    const data = await railkitLiveAtStation(code, hours);
     res.json(data);
   } catch (error) {
     handleError(res, error);
@@ -290,35 +368,38 @@ app.get("/api/station/:code/live", async (req, res) => {
 });
 
 
-// Active train operational exceptions from RailRadar
+// Operational alerts from RailKit.
 app.get("/api/alerts", async (req, res) => {
   const type = String(req.query.type || "all").trim().toLowerCase();
 
   const allowedTypes = new Set([
-    "all",
-    "cancelled",
-    "rescheduled",
-    "diverted",
-    "partially_cancelled",
-    "partial_source",
-    "partial_destination"
+    "all", "cancelled", "rescheduled", "diverted",
+    "partially_cancelled", "partial_source", "partial_destination"
   ]);
 
   if (!allowedTypes.has(type)) {
     return res.status(400).json({
+      success: false,
       error: "Invalid alert type."
     });
   }
 
+  if (type !== "all") {
+    return res.status(501).json({
+      success: false,
+      error: "RailKit alert feed is available, but this individual filter needs response mapping."
+    });
+  }
+
   try {
-    const data = await railradar.exceptions(type, API_KEY);
+    const data = await railkitCancelList();
     return res.json(data);
   } catch (error) {
-    handleError(res, error);
+    return handleError(res, error);
   }
 });
 
-// Official railway news from PIB
+// Official railway news from PIB// Official railway news from PIB
 app.get("/api/news", async (req, res) => {
   const sourceUrl =
     "https://www.pib.gov.in/AllRelease.aspx?lang=1&reg=3";
