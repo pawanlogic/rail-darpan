@@ -382,8 +382,16 @@ app.get('/api/train/search', async (req, res) => {
   }
   try {
     const limit = Math.min(50, Math.max(1, Number(req.query.limit) || 10));
-    const payload = /^\d+$/.test(query)
-      ? await railkitTrainByNumber(query)
+    const isNumericQuery = /^\d+$/.test(query);
+
+    // For a complete 5-digit number, show nearby trains sharing
+    // the first four digits instead of returning only the exact match.
+    const numberPrefix = isNumericQuery && query.length === 5
+      ? query.slice(0, 4)
+      : query;
+
+    const payload = isNumericQuery
+      ? await railkitTrainByNumber(numberPrefix)
       : await railkitTrainsByName(query);
     if (!payload || payload.success === false) {
       return res.status(502).json(payload || { success: false, error: 'Train search unavailable.' });
