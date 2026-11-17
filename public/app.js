@@ -3161,6 +3161,15 @@ function rdScheduleV2Minutes(raw) {
   if (typeof raw === "number" && Number.isFinite(raw)) return raw;
 
   const text = String(raw).trim();
+
+  // RailKit travel_time format: "17:35 hrs"
+  const clockDuration = text.match(
+    /^(\d{1,3}):([0-5]\d)(?:\s*(?:h|hr|hrs|hours?))?$/i
+  );
+  if (clockDuration) {
+    return Number(clockDuration[1]) * 60 + Number(clockDuration[2]);
+  }
+
   const h = text.match(/(\d+(?:\.\d+)?)\s*(?:hours?|hrs?|h)\b/i);
   const m = text.match(/(\d+(?:\.\d+)?)\s*(?:minutes?|mins?|m)\b/i);
 
@@ -3311,7 +3320,8 @@ function rdScheduleV2IsHalt(stop, index, total) {
   for (const key of [
     "haltDuration", "halt_duration", "stoppageDuration",
     "stoppage_duration", "dwellTime", "dwell_time",
-    "haltMinutes", "halt_minutes", "stoppageMinutes", "stoppage_minutes"
+    "halt", "haltMinutes", "halt_minutes",
+    "stoppageMinutes", "stoppage_minutes"
   ]) {
     if (!(key in stop) || stop[key] === null || stop[key] === "") continue;
 
@@ -3395,7 +3405,7 @@ function rdScheduleV2AppendGroupedStops(parent, stops, offset, total) {
     const stop = stops[i];
 
     if (rdScheduleV2IsHalt(stop, absoluteIndex, total)) {
-      parent.appendChild(rdScheduleV2Stop(stop, absoluteIndex));
+      parent.appendChild(rdScheduleV2Stop(stop, absoluteIndex, total));
       i++;
       continue;
     }
@@ -3425,7 +3435,11 @@ function rdScheduleV2AppendGroupedStops(parent, stops, offset, total) {
 
     passThrough.forEach((station, localIndex) => {
       list.appendChild(
-        rdScheduleV2Stop(station, offset + i - passThrough.length + localIndex)
+        rdScheduleV2Stop(
+          station,
+          offset + i - passThrough.length + localIndex,
+          total
+        )
       );
     });
 
@@ -3434,8 +3448,8 @@ function rdScheduleV2AppendGroupedStops(parent, stops, offset, total) {
   }
 }
 
-function rdScheduleV2Stop(stop, index) {
-  const isHalt = stop.isHalt === true || stop.is_halt === true;
+function rdScheduleV2Stop(stop, index, total) {
+  const isHalt = rdScheduleV2IsHalt(stop, index, total);
 
   const row = document.createElement("div");
   row.className = `rd-schedule-v2-stop${isHalt ? " rd-schedule-v2-stop-halt" : ""}`;
@@ -3487,7 +3501,7 @@ function rdScheduleV2Stop(stop, index) {
   const explicitHalt =
     stop.haltDuration ?? stop.halt_duration ??
     stop.stoppageDuration ?? stop.stoppage_duration ??
-    stop.dwellTime ?? stop.haltMinutes ?? stop.halt_minutes;
+    stop.dwellTime ?? stop.halt ?? stop.haltMinutes ?? stop.halt_minutes;
 
   if (explicitHalt !== undefined && explicitHalt !== null) {
     halt = rdScheduleV2Duration(explicitHalt);
@@ -4132,11 +4146,20 @@ function renderCompactScheduleV2(payload, panel) {
   const distance = train.distance ?? train.distanceKm ?? train.distance_km ??
     (route.length ? route[route.length - 1].distance : null);
 
-  const durationRaw = train.durationMinutes ?? train.duration_minutes ??
-    train.journeyDurationMinutes ?? train.duration;
+  const durationRaw =
+    train.durationMinutes ??
+    train.duration_minutes ??
+    train.journeyDurationMinutes ??
+    train.journey_duration_minutes ??
+    train.travel_time ??
+    train.travelTime ??
+    train.duration ??
+    payload?.travel_time ??
+    payload?.travelTime;
 
-  const halts = route.filter(stop =>
-    stop && (stop.isHalt === true || stop.is_halt === true)
+  // RailKit supplies haltMinutes/halt for each route station.
+  const halts = route.filter((stop, index) =>
+    rdScheduleV2IsHalt(stop, index, route.length)
   ).length;
 
   const metrics = document.createElement("div");
