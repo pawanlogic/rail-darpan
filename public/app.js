@@ -5827,7 +5827,11 @@ function rdAttachAutocomplete(inputEl, config) {
       return;
     }
 
-    if (query.length < 2) {
+    const minimumLength = typeof config.minLength === "function"
+      ? config.minLength(query)
+      : Number(config.minLength || 2);
+
+    if (query.length < minimumLength) {
       hide();
       return;
     }
@@ -5954,6 +5958,7 @@ function rdTrainSuggestions(payload) {
 /* Main train autocomplete: Live and Schedule only, never PNR */
 rdAttachAutocomplete(input, {
   when: () => currentMode === "live" || currentMode === "schedule",
+  minLength: query => /^\d+$/.test(query) ? 5 : 2,
   endpoint: query => `/api/train/search?q=${encodeURIComponent(query)}&limit=8`,
   items: rdTrainSuggestions,
   label: item => [
@@ -9054,6 +9059,7 @@ function rdNtesRender() {
   feed.appendChild(form);
 
   rdAttachAutocomplete(searchInput, {
+    minLength: query => /^\d+$/.test(query) ? 5 : 2,
     endpoint: query => `/api/train/search?q=${encodeURIComponent(query)}&limit=8`,
     items: rdTrainSuggestions,
     label: item => [

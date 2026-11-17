@@ -384,14 +384,13 @@ app.get('/api/train/search', async (req, res) => {
     const limit = Math.min(50, Math.max(1, Number(req.query.limit) || 10));
     const isNumericQuery = /^\d+$/.test(query);
 
-    // For a complete 5-digit number, show nearby trains sharing
-    // the first four digits instead of returning only the exact match.
-    const numberPrefix = isNumericQuery && query.length === 5
-      ? query.slice(0, 4)
-      : query;
+    // RailKit trainByNumber requires an exact 5-digit number.
+    if (isNumericQuery && query.length !== 5) {
+      return res.json({ success: true, query, count: 0, data: [] });
+    }
 
     const payload = isNumericQuery
-      ? await railkitTrainByNumber(numberPrefix)
+      ? await railkitTrainByNumber(query)
       : await railkitTrainsByName(query);
     if (!payload || payload.success === false) {
       return res.status(502).json(payload || { success: false, error: 'Train search unavailable.' });
