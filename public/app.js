@@ -3252,11 +3252,13 @@ function rdScheduleV2DayList(raw) {
 
 function rdScheduleV2StationName(stop) {
   return rdScheduleV2Value(stop, [
-    "stationName", "station_name", "name", "stopName", "stop_name", "label"
+    "stationName", "station_name", "stnName", "stn_name",
+    "name", "stopName", "stop_name", "label"
   ]) || rdScheduleV2Value(stop && stop.station, [
-    "stationName", "station_name", "name", "code"
-  ]) || rdScheduleV2Value(stop, ["stationCode", "station_code", "code"]) ||
-    "Station";
+    "stationName", "station_name", "stnName", "stn_name", "name", "code"
+  ]) || rdScheduleV2Value(stop, [
+    "stationCode", "station_code", "stnCode", "stn_code", "code"
+  ]) || "Station";
 }
 
 
@@ -3443,8 +3445,10 @@ function rdScheduleV2Stop(stop, index) {
   const sequence = rdScheduleV2Value(stop, ["sequence", "stationSequence", "station_sequence"]) || String(index + 1);
 
   const stationCode = rdScheduleV2Value(stop && stop.station, [
-    "code", "stationCode", "station_code"
-  ]) || rdScheduleV2Value(stop, ["stationCode", "station_code", "code"]);
+    "code", "stationCode", "station_code", "stnCode", "stn_code"
+  ]) || rdScheduleV2Value(stop, [
+    "stationCode", "station_code", "stnCode", "stn_code", "code"
+  ]);
 
   const stationTitle = rdScheduleV2StationName(stop);
 
@@ -4090,13 +4094,18 @@ function renderCompactScheduleV2(payload, panel) {
   }
 
   const train = payload && payload.train && typeof payload.train === "object"
-    ? payload.train : {};
+    ? payload.train
+    : payload && payload.trainInfo && typeof payload.trainInfo === "object"
+      ? payload.trainInfo
+      : {};
   const route = Array.isArray(payload && payload.route)
     ? payload.route
     : Array.isArray(payload && payload.stops) ? payload.stops : [];
 
   const input = document.getElementById("searchInput");
-  const number = rdScheduleV2Value(train, ["number", "trainNumber", "train_number"]) ||
+  const number = rdScheduleV2Value(train, [
+    "number", "trainNumber", "train_number", "trainNo", "train_no"
+  ]) ||
     rdScheduleV2Value(payload, ["trainNumber", "train_number"]) ||
     (input ? input.value.trim() : "");
 
