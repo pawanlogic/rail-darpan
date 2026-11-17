@@ -5907,20 +5907,32 @@ rdAttachAutocomplete(rdStationCodeInput, {
   onSelect: () => stationLiveForm.requestSubmit()
 });
 
+function rdTrainSuggestions(payload) {
+  const root = payload && payload.data !== undefined
+    ? payload.data
+    : payload;
+
+  if (Array.isArray(root)) return root;
+  if (Array.isArray(root?.trains)) return root.trains;
+  if (Array.isArray(root?.results)) return root.results;
+
+  return [];
+}
+
 /* Main train autocomplete: Live and Schedule only, never PNR */
 rdAttachAutocomplete(input, {
   when: () => currentMode === "live" || currentMode === "schedule",
   endpoint: query => `/api/train/search?q=${encodeURIComponent(query)}&limit=8`,
-  items: payload => Array.isArray(payload.data) ? payload.data : [],
+  items: rdTrainSuggestions,
   label: item => [
-    item.number || item.trainNumber || "",
+    item.number || item.trainNumber || item.trainNo || "",
     item.name || item.trainName || ""
   ].filter(Boolean).join(" — ") || "Train",
   description: item => [
     item.sourceName || item.source || "",
     item.destName || item.destination || item.dest || ""
   ].filter(Boolean).join(" → "),
-  value: item => String(item.number || item.trainNumber || ""),
+  value: item => String(item.number || item.trainNumber || item.trainNo || ""),
   onSelect: () => form.requestSubmit()
 });
 
@@ -7507,6 +7519,8 @@ let rdNtesError = "";
 let rdNtesCandidates = [];
 let rdNtesLiveData = null;
 let rdNtesMeta = null;
+let rdNtesRailKitAlerts = [];
+let rdNtesAlertScan = null;
 let rdNtesRequestId = 0;
 
 function rdNtesToday() {
@@ -8344,58 +8358,157 @@ function rdNtesDisruptionLabel(exceptions, status) {
 }
 
 function rdNtesBuildTimeCell(station, kind) {
-  const actual = station[`actual${kind}`];
-  const scheduled = station[`scheduled${kind}`];
+  const key = kind.toLowerCase();
+  const event = station && station[key] && typeof station[key] === "object"
+    ? station[key]
+    : {};
 
-  const isObserved =
-    Boolean(actual) && station.provenance === "observed";
+  const actual =
+    event.actual ||
+    event.expected ||
+    station["actual" + kind] ||
+    station["expected" + kind] ||
+    "";
 
-  const isPredicted =
-    Boolean(actual) && station.provenance === "predicted";
+  const scheduled =
+    event.scheduled ||
+    station["scheduled" + kind] ||
+    "";
 
-  const shown = isObserved || isPredicted
-    ? actual
-    : scheduled || actual;
-
+  const shown = actual || scheduled;
   const cell = document.createElement("td");
+
   cell.appendChild(
-    rdNtesElement("span", "rd-ntes-time-main", rdNtesFormatDateTime(shown))
+    rdNtesElement(
+      "span",
+      "rd-ntes-time-main",
+      shown ? rdNtesFormatDateTime(shown) : "—"
+    )
   );
 
-  let label = "Scheduled";
-  if (isObserved) label = "Actual";
-  else if (isPredicted) label = "Expected";
+  let label = "";
+  if (actual) {
+    label = event.provenance === "predicted"
+      ? "Expected"
+      : event.provenance === "observed"
+        ? "Actual"
+        : "Reported";
+  } else if (scheduled) {
+    label = "Scheduled";
+  }
 
   cell.appendChild(
-    rdNtesElement("span", "rd-ntes-time-label", shown ? label : "")
+    rdNtesElement("span", "rd-ntes-time-label", label)
   );
 
   return cell;
 }
 
 function rdNtesDelayText(station) {
+  function format(value) {
+    if (value === undefined || value === null || value === '') return '';
+    const text = String(value).trim().replace(/\s+/g, ' ');
+    if (!text) return '';
+    if (/^on\s*time$/i.test(text)) return 'On Time';
+
+    const clock = text.match(/^([+-]?)(\d{1,3}):([0-5]\d)(?:\s*(?:hrs?|hours?))?\.?$/i);
+    if (clock) {
+      const hours = Number(clock[2]);
+      const minutes = Number(clock[3]);
+      const total = hours * 60 + minutes;
+      if (total === 0) return 'On Time';
+      const duration = hours && minutes
+        ? hours + 'h ' + minutes + 'm'
+        : hours ? hours + 'h' : minutes + ' min';
+      return duration + (clock[1] === '-' ? ' early' : ' late');
+    }
+
+    const numeric = text.match(/^([+-]?\d+(?:\.\d+)?)(?:\s*(?:min|mins|minutes?))?$/i);
+    if (numeric) {
+      const delay = Number(numeric[1]);
+      if (delay === 0) return 'On Time';
+      return Math.abs(delay) + ' min ' + (delay < 0 ? 'early' : 'late');
+    }
+
+    return text;
+  }
+
   const values = [
-    station.delayArrival,
-    station.delayDeparture
-  ].filter(value => value !== undefined && value !== null);
+    format(station?.arrival?.delay ?? station?.delayArrival),
+    format(station?.departure?.delay ?? station?.delayDeparture)
+  ].filter(Boolean);
 
-  if (!values.length) return "—";
+  const unique = [...new Set(values)];
+  return unique.length ? unique.join(' · ') : '—';
+}
+function rdNtesAlertDateKey(value) {
+  const text = String(value || "").trim();
 
-  const delay = Number(values[0]);
-  if (!Number.isFinite(delay)) return "—";
+  if (/^\d{4}-\d{2}-\d{2}$/.test(text)) return text;
 
-  const prefix = station.provenance === "predicted" ? "Expected " : "";
+  const dmy = text.match(/^(\d{2})-(\d{2})-(\d{4})$/);
+  if (dmy) return `${dmy[3]}-${dmy[2]}-${dmy[1]}`;
 
-  if (delay === 0) return prefix + "On Time";
-  if (delay > 0) return `${prefix}${delay} min late`;
-  return `${prefix}${Math.abs(delay)} min early`;
+  return "";
+}
+
+function rdNtesSelectRailKitAlerts(payload, trainNumber, journeyDate) {
+  const root = payload && payload.data !== undefined
+    ? payload.data
+    : payload;
+
+  const number = String(trainNumber || "").replace(/\D/g, "");
+  const date = rdNtesAlertDateKey(journeyDate);
+
+  if (!number || !date || !root || typeof root !== "object") return [];
+
+  const groups = [
+    ["fullyCancelledTrains", "FULLY_CANCELLED"],
+    ["partiallyCancelledTrains", "PARTIALLY_CANCELLED"],
+    ["divertedTrains", "DIVERTED"]
+  ];
+
+  const matches = [];
+
+  for (const [field, type] of groups) {
+    const records = Array.isArray(root[field]) ? root[field] : [];
+
+    for (const item of records) {
+      if (!item || typeof item !== "object") continue;
+
+      const itemNumber = String(
+        item.trainNo || item.trainNumber || item.number || ""
+      ).replace(/\D/g, "");
+
+      const itemDate = rdNtesAlertDateKey(
+        item.journeyDate || item.date
+      );
+
+      if (itemNumber === number && itemDate === date) {
+        matches.push({ ...item, _railKitType: type });
+      }
+    }
+  }
+
+  return matches;
 }
 
 function rdNtesRenderLive(data, meta, container) {
   const train = data.train || {};
   const source = train.source || {};
   const destination = train.destination || {};
-  const exceptions = rdNtesFlattenExceptions(data.exceptions);
+  const liveExceptions = rdNtesFlattenExceptions(data.exceptions);
+
+  const feedExceptions = rdNtesRailKitAlerts.map(alert => ({
+    type: alert._railKitType,
+    message: alert.message || "",
+    reason: alert.reason || "",
+    cancelledSegment: alert.cancelledSegment || null,
+    diversion: alert.diversion || null,
+    journeyDate: alert.journeyDate || ""
+  }));
+
+  const exceptions = [...liveExceptions, ...feedExceptions];
   const label = rdNtesDisruptionLabel(exceptions, data.status);
 
   const statusNormalized = String(data.status || "").toLowerCase();
@@ -8508,6 +8621,40 @@ function rdNtesRenderLive(data, meta, container) {
         );
       }
 
+      if (exception.reason) {
+        item.appendChild(
+          rdNtesElement("div", "", "Reason: " + exception.reason)
+        );
+      }
+
+      if (exception.cancelledSegment) {
+        item.appendChild(
+          rdNtesElement(
+            "div",
+            "",
+            "Cancelled segment: " +
+              rdNtesAlertDetail(exception.cancelledSegment)
+          )
+        );
+      }
+
+      if (exception.diversion) {
+        item.appendChild(
+          rdNtesElement(
+            "div",
+            "",
+            "Diversion: " + rdNtesAlertDetail(exception.diversion)
+          )
+        );
+      }
+
+      if (exception.journeyDate) {
+        item.appendChild(
+          rdNtesElement("div", "rd-ntes-muted",
+            "Journey date: " + exception.journeyDate)
+        );
+      }
+
       issueCard.appendChild(item);
     });
 
@@ -8516,9 +8663,19 @@ function rdNtesRenderLive(data, meta, container) {
     const normalNotice = rdNtesElement(
       "div",
       "rd-ntes-note",
-      "No disruption exception is currently reported for this journey date. Train running status and timetable are shown below. Please verify critical journey information on official NTES before travel."
+      "No matching cancellation or diversion record was found for this train and journey date. Live running status and timetable are shown below."
     );
     panel.appendChild(normalNotice);
+  }
+
+  if (rdNtesAlertScan && rdNtesAlertScan.complete === false) {
+    panel.appendChild(
+      rdNtesElement(
+        "div",
+        "rd-ntes-note",
+        "RailKit's disruption scan is incomplete. Additional railway updates may not yet be included."
+      )
+    );
   }
 
   const current = data.currentLocation || {};
@@ -8545,31 +8702,48 @@ function rdNtesRenderLive(data, meta, container) {
 
   panel.appendChild(infoGrid);
 
-  const route = Array.isArray(data.route) ? data.route : [];
-  const haltStations = route.filter(station => station && station.isHalt === true);
+  const route = Array.isArray(data.route)
+    ? data.route
+    : Array.isArray(data.timeline) ? data.timeline : [];
+
+  const isHalt = station => {
+    const type = String(station?.type || "").toLowerCase();
+    return station?.isHalt === true ||
+      type === "stoppage" ||
+      type === "halt" ||
+      type === "stop";
+  };
+
+  const haltStations = route.filter(isHalt);
+  const intermediateStations = haltStations.length
+    ? route.filter(station => !isHalt(station))
+    : [];
+
+  // Keep the original compact behaviour: show only halts first.
+  // Older provider formats without halt metadata continue showing their route.
   const stations = haltStations.length ? haltStations : route;
 
+  const currentCode =
+    data.currentStationCode ||
+    (data.currentLocation && typeof data.currentLocation === "object"
+      ? data.currentLocation.stationCode
+      : "");
+
   const stationsCard = rdNtesElement("section", "rd-ntes-stations-card");
+
   stationsCard.appendChild(
     rdNtesElement(
       "h4",
       "rd-ntes-section-title",
-      `Train route & station timings (${stations.length} stations)`
+      haltStations.length
+        ? `Train route & halt timings (${stations.length} halts)`
+        : `Train route & station timings (${stations.length} stations)`
     )
   );
 
-  if (!stations.length) {
-    stationsCard.appendChild(
-      rdNtesElement(
-        "div",
-        "rd-ntes-note",
-        "Station-wise timetable is not available for this train/date."
-      )
-    );
-  } else {
+  function createStationTable(rows) {
     const wrap = rdNtesElement("div", "rd-ntes-table-wrap");
     const table = rdNtesElement("table", "rd-ntes-table");
-
     const thead = document.createElement("thead");
     const headingRow = document.createElement("tr");
 
@@ -8583,40 +8757,40 @@ function rdNtesRenderLive(data, meta, container) {
 
     const tbody = document.createElement("tbody");
 
-    stations.forEach(station => {
+    rows.forEach(station => {
       const row = document.createElement("tr");
+      const stationCode =
+        station.stationCode || station.code || station.station_code || "";
 
-      const isCurrent =
-        current.stationCode &&
-        current.stationCode === station.stationCode;
-
-      if (isCurrent) row.className = "is-current";
+      if (
+        station.status === "current" ||
+        (currentCode && currentCode === stationCode)
+      ) {
+        row.className = "is-current";
+      }
 
       const stationCell = document.createElement("td");
       stationCell.appendChild(
         rdNtesElement(
           "span",
           "rd-ntes-station-name",
-          station.stationName || "Station"
+          station.stationName || station.name || "Station"
         )
       );
+
       stationCell.appendChild(
         rdNtesElement(
           "span",
           "rd-ntes-station-code",
-          `${station.stationCode || "—"} · ${station.distance ?? "—"} km`
+          `${stationCode || "—"} · ${station.distanceKm ?? station.distance ?? "—"} km`
         )
       );
 
       row.appendChild(stationCell);
       row.appendChild(rdNtesBuildTimeCell(station, "Arrival"));
       row.appendChild(rdNtesBuildTimeCell(station, "Departure"));
-      row.appendChild(
-        rdNtesElement("td", "", rdNtesDelayText(station))
-      );
-      row.appendChild(
-        rdNtesElement("td", "", station.platform || "—")
-      );
+      row.appendChild(rdNtesElement("td", "", rdNtesDelayText(station)));
+      row.appendChild(rdNtesElement("td", "", station.platform || "—"));
 
       const statusText = String(station.status || "—")
         .replace(/[_-]+/g, " ");
@@ -8625,7 +8799,7 @@ function rdNtesRenderLive(data, meta, container) {
         rdNtesElement(
           "td",
           "",
-          statusText.replace(/\b\w/g, char => char.toUpperCase())
+          statusText.replace(/\\b\\w/g, char => char.toUpperCase())
         )
       );
 
@@ -8634,7 +8808,38 @@ function rdNtesRenderLive(data, meta, container) {
 
     table.appendChild(tbody);
     wrap.appendChild(table);
-    stationsCard.appendChild(wrap);
+    return wrap;
+  }
+
+  if (!route.length) {
+    stationsCard.appendChild(
+      rdNtesElement(
+        "div",
+        "rd-ntes-note",
+        "Station-wise timetable is not available for this train/date."
+      )
+    );
+  } else {
+    stationsCard.appendChild(createStationTable(stations));
+
+    if (intermediateStations.length) {
+      const details = document.createElement("details");
+      details.className = "rd-ntes-intermediate-dropdown";
+      details.style.marginTop = "14px";
+
+      const summary = document.createElement("summary");
+      summary.textContent =
+        `Show intermediate stations (${intermediateStations.length})`;
+      summary.style.cursor = "pointer";
+      summary.style.padding = "12px";
+      summary.style.border = "1px solid rgba(91,145,210,.2)";
+      summary.style.borderRadius = "10px";
+      summary.style.fontWeight = "700";
+
+      details.appendChild(summary);
+      details.appendChild(createStationTable(intermediateStations));
+      stationsCard.appendChild(details);
+    }
   }
 
   panel.appendChild(stationsCard);
@@ -8652,6 +8857,8 @@ async function rdNtesLoadLive(trainNumber, date, requestId) {
   rdNtesCandidates = [];
   rdNtesLiveData = null;
   rdNtesMeta = null;
+  rdNtesRailKitAlerts = [];
+  rdNtesAlertScan = null;
   rdNtesRender();
 
   try {
@@ -8659,9 +8866,21 @@ async function rdNtesLoadLive(trainNumber, date, requestId) {
       `/api/train/${encodeURIComponent(trainNumber)}/live` +
       `?date=${encodeURIComponent(date)}`;
 
-    const payload = await rdNtesRequest(url);
+    const [payload, alertPayload] = await Promise.all([
+      rdNtesRequest(url),
+      rdNtesRequest("/api/alerts").catch(error => {
+        console.warn("RailKit train alert lookup unavailable:", error.message);
+        return null;
+      })
+    ]);
 
     if (requestId !== rdNtesRequestId) return;
+
+    rdNtesRailKitAlerts = alertPayload
+      ? rdNtesSelectRailKitAlerts(alertPayload, trainNumber, date)
+      : [];
+
+    rdNtesAlertScan = alertPayload?.scan || null;
 
     rdNtesLiveData = payload.data || payload;
     rdNtesMeta = payload.meta || {};
@@ -8673,6 +8892,8 @@ async function rdNtesLoadLive(trainNumber, date, requestId) {
     if (requestId !== rdNtesRequestId) return;
 
     rdNtesLoading = false;
+    rdNtesRailKitAlerts = [];
+    rdNtesAlertScan = null;
     rdNtesError = error.message || "Unable to load train status.";
     rdNtesRender();
   }
@@ -8705,7 +8926,7 @@ async function rdNtesRunSearch(query, date) {
 
     if (requestId !== rdNtesRequestId) return;
 
-    const candidates = Array.isArray(payload.data) ? payload.data : [];
+    const candidates = rdTrainSuggestions(payload);
 
     if (!candidates.length) {
       rdNtesLoading = false;
@@ -8716,17 +8937,17 @@ async function rdNtesRunSearch(query, date) {
 
     const numericQuery = rdNtesQuery.replace(/\D/g, "");
     const exact = candidates.find(item =>
-      String(item.number || item.trainNumber || "").replace(/\D/g, "") === numericQuery
+      String(item.number || item.trainNumber || item.trainNo || "").replace(/\D/g, "") === numericQuery
     );
 
     if (exact) {
-      const number = exact.number || exact.trainNumber;
+      const number = exact.number || exact.trainNumber || exact.trainNo;
       await rdNtesLoadLive(number, rdNtesJourneyDate, requestId);
       return;
     }
 
     if (candidates.length === 1) {
-      const number = candidates[0].number || candidates[0].trainNumber;
+      const number = candidates[0].number || candidates[0].trainNumber || candidates[0].trainNo;
       await rdNtesLoadLive(number, rdNtesJourneyDate, requestId);
       return;
     }
@@ -8802,16 +9023,16 @@ function rdNtesRender() {
 
   rdAttachAutocomplete(searchInput, {
     endpoint: query => `/api/train/search?q=${encodeURIComponent(query)}&limit=8`,
-    items: payload => Array.isArray(payload.data) ? payload.data : [],
+    items: rdTrainSuggestions,
     label: item => [
-      item.number || item.trainNumber || "",
+      item.number || item.trainNumber || item.trainNo || "",
       item.name || item.trainName || ""
     ].filter(Boolean).join(" — ") || "Train",
     description: item => [
       item.sourceName || item.source || "",
       item.destName || item.destination || item.dest || ""
     ].filter(Boolean).join(" → "),
-    value: item => String(item.number || item.trainNumber || ""),
+    value: item => String(item.number || item.trainNumber || item.trainNo || ""),
     onSelect: () => rdNtesRunSearch(searchInput.value, dateInput.value)
   });
 
@@ -8850,7 +9071,7 @@ function rdNtesRender() {
     const candidatesBox = rdNtesElement("div", "rd-ntes-candidates");
 
     rdNtesCandidates.forEach(candidate => {
-      const number = candidate.number || candidate.trainNumber || "";
+      const number = candidate.number || candidate.trainNumber || candidate.trainNo || "";
       const name = candidate.name || candidate.trainName || "Train";
       const source = candidate.sourceName || candidate.source || "";
       const destination =
@@ -8903,6 +9124,10 @@ rdRenderRailwayAlerts = rdNtesRender;
 rdNtesRender();
 
 /* END NTES STYLE TRAIN SEARCH */
+
+
+
+
 
 
 async function loadRailwayNews({ silent = false } = {}) {

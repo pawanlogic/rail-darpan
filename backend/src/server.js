@@ -47,7 +47,7 @@ app.get("/api/health", (req, res) => {
   res.json({
     ok: true,
     service: "Rail Darpan API",
-    providerConfigured: Boolean(API_KEY),
+    providerConfigured: Boolean(process.env.RAILKIT_API_KEY),
     providers: {
       railkit: Boolean(process.env.RAILKIT_API_KEY)
     },
@@ -159,6 +159,85 @@ app.get("/api/lookup/trains", async (req, res) => {
   }
 });
 
+function railKitLabel(value) {
+  if (value === undefined || value === null) return '';
+  if (typeof value !== 'object') return String(value);
+  return String(value.name || value.stationName || value.station_name || value.code || value.stationCode || '');
+}
+
+function railKitRows(payload, keys) {
+  const root = payload && payload.data !== undefined ? payload.data : payload;
+  if (Array.isArray(root)) return root;
+  const containers = [root, root && root.data, root && root.train, root && root.station];
+  for (const item of containers) {
+    if (!item || typeof item !== 'object') continue;
+    for (const key of keys) {
+      if (Array.isArray(item[key])) return item[key];
+    }
+  }
+  for (const item of [root, root && root.train, root && root.trainDetails]) {
+    if (!item || typeof item !== 'object') continue;
+    const number = item.trainNo || item.trainNumber || item.train_number || item.number;
+    if (number !== undefined && number !== null) return [item];
+  }
+  for (const item of [root, root && root.station]) {
+    if (!item || typeof item !== 'object') continue;
+    if (item.code || item.stationCode || item.station_code) return [item];
+  }
+  return [];
+}
+
+function normalizeRailKitTrain(row) {
+  const nested = row.train && typeof row.train === 'object' ? row.train :
+    row.trainDetails && typeof row.trainDetails === 'object' ? row.trainDetails : row;
+  const number = String(row.trainNo || row.trainNumber || row.number || nested.trainNo || nested.trainNumber || nested.number || '').trim();
+  const name = String(row.trainName || row.name || nested.trainName || nested.name || '').trim();
+  const from = row.from || row.source || nested.from || nested.source;
+  const to = row.to || row.destination || nested.to || nested.destination;
+  return {
+    ...row,
+    number,
+    trainNumber: number,
+    trainNo: number,
+    name,
+    trainName: name,
+    sourceName: row.sourceName || row.fromName || railKitLabel(from),
+    destName: row.destName || row.destinationName || row.toName || railKitLabel(to)
+  };
+}
+
+function normalizeRailKitStation(row) {
+  const nested = row.station && typeof row.station === 'object' ? row.station : row;
+  const name = String(row.name || row.stationName || row.station_name || nested.name || nested.stationName || '');
+  const code = String(row.code || row.stationCode || row.station_code || nested.code || nested.stationCode || '').toUpperCase();
+  const city = String(row.city || row.cityName || nested.city || '');
+  return { ...row, name, stationName: name, code, stationCode: code, city, cityName: city };
+}
+
+function normalizeRailKitStop(stop) {
+  stop = stop && typeof stop === 'object' ? stop : {};
+  const station = stop.station && typeof stop.station === 'object' ? stop.station : {};
+  const arrival = stop.arrival && typeof stop.arrival === 'object' ? stop.arrival : {};
+  const departure = stop.departure && typeof stop.departure === 'object' ? stop.departure : {};
+  const type = String(stop.type || stop.stopType || stop.stop_type || '').toLowerCase();
+  const haltDuration = stop.haltDuration || stop.halt_duration || stop.stoppageDuration || stop.stoppage_duration || stop.dwellTime || stop.haltMinutes || stop.halt_minutes;
+  const isHalt = stop.isHalt === true || stop.is_halt === true || ['stoppage', 'halt', 'stop'].includes(type) || (haltDuration !== undefined && haltDuration !== null && Number(haltDuration) > 0);
+  return {
+    ...stop,
+    stationName: stop.stationName || stop.station_name || station.stationName || station.name || stop.name || '',
+    stationCode: stop.stationCode || stop.station_code || station.stationCode || station.code || stop.code || '',
+    isHalt,
+    scheduledArrival: arrival.scheduled || stop.scheduledArrival || stop.scheduled_arrival || stop.arrivalTime || stop.arrival_time || (typeof stop.arrival === 'string' ? stop.arrival : null),
+    actualArrival: arrival.actual || stop.actualArrival || stop.actual_arrival || null,
+    scheduledDeparture: departure.scheduled || stop.scheduledDeparture || stop.scheduled_departure || stop.departureTime || stop.departure_time || (typeof stop.departure === 'string' ? stop.departure : null),
+    actualDeparture: departure.actual || stop.actualDeparture || stop.actual_departure || null,
+    delayArrival: arrival.delayMinutes || arrival.delay || stop.delayArrival || null,
+    delayDeparture: departure.delayMinutes || departure.delay || stop.delayDeparture || null,
+    platform: stop.platform || stop.platformNumber || stop.platformNo || null,
+    distance: stop.distance || stop.distanceKm || stop.km || null
+  };
+}
+
 // Live train status
 app.get("/api/train/:number/live", async (req, res) => {
   const number = String(req.params.number || "").trim();
@@ -212,29 +291,80 @@ app.get("/api/train/:number/live", async (req, res) => {
     const timeline = Array.isArray(live.timeline) ? live.timeline : [];
 
     const currentIndex = timeline.findIndex(stop =>
-      stop.status === "current" ||
+      String(stop.status || '').toLowerCase() === 'current' ||
       (live.currentStationCode && stop.stationCode === live.currentStationCode)
     );
 
     const currentPoint = currentIndex >= 0 ? timeline[currentIndex] : null;
-    const nextPoint = timeline
-      .slice(currentIndex >= 0 ? currentIndex + 1 : 0)
-      .find(stop => stop.status === "upcoming") || null;
+    const nextPoint = timeline.slice(currentIndex >= 0 ? currentIndex + 1 : 0)
+      .find(stop => ['upcoming', 'next'].includes(String(stop.status || '').toLowerCase())) || null;
 
+    const route = timeline.map(normalizeRailKitStop);
+    const currentStop = currentPoint ? normalizeRailKitStop(currentPoint) : {};
+    const nextStop = nextPoint ? normalizeRailKitStop(nextPoint) : {};
+    const trainInfo = live.train && typeof live.train === 'object' ? live.train : {};
+    const sourceInfo = trainInfo.source && typeof trainInfo.source === 'object' ? trainInfo.source : {};
+    const destinationInfo = trainInfo.destination && typeof trainInfo.destination === 'object' ? trainInfo.destination : {};
+
+    const sourceName = sourceInfo.name || sourceInfo.stationName ||
+      (typeof live.sourceStation === 'string' ? live.sourceStation : '') ||
+      live.sourceName || route[0]?.stationName || '';
+    const sourceCode = sourceInfo.code || sourceInfo.stationCode ||
+      live.sourceStationCode || route[0]?.stationCode || '';
+    const destinationName = destinationInfo.name || destinationInfo.stationName ||
+      (typeof live.destinationStation === 'string' ? live.destinationStation : '') ||
+      live.destinationName || route[route.length - 1]?.stationName || '';
+    const destinationCode = destinationInfo.code || destinationInfo.stationCode ||
+      live.destinationStationCode || route[route.length - 1]?.stationCode || '';
+    const trainName = live.trainName || live.name || trainInfo.name || '';
+    const suppliedCurrent = live.currentLocation;
+
+    const currentLocation = {
+      ...currentStop,
+      stationName: currentStop.stationName ||
+        (typeof suppliedCurrent === 'string' ? suppliedCurrent : suppliedCurrent?.stationName) ||
+        live.currentStationName || '',
+      stationCode: currentStop.stationCode || live.currentStationCode || ''
+    };
+
+    const nextHalt = {
+      ...nextStop,
+      stationName: nextStop.stationName || live.nextStationName || '',
+      stationCode: nextStop.stationCode || ''
+    };
+
+    const status = live.statusNote || live.progress?.journeyStatus || live.status || '';
     const normalizedData = {
       ...live,
-      trainNumber: live.trainNo || number,
-      status: live.statusNote || live.progress?.journeyStatus || "",
-      runningStatus: live.statusNote || live.progress?.journeyStatus || "",
-      currentLocation: currentPoint?.stationName || "",
-      currentStation: currentPoint?.stationName || "",
-      currentStationCode: live.currentStationCode || currentPoint?.stationCode || "",
-      speed: live.averageSpeedKmph ?? null,
-      nextStation: nextPoint?.stationName || "",
-      sourceStation: timeline[0]?.stationName || "",
-      destinationStation: timeline[timeline.length - 1]?.stationName || "",
-      route: timeline,
-      updatedAt: live.lastUpdate || null
+      train: {
+        ...trainInfo,
+        number: trainInfo.number || live.trainNo || number,
+        name: trainName,
+        type: trainInfo.type || live.trainType || live.type || 'Train',
+        category: trainInfo.category || live.category || '',
+        distance: trainInfo.distance ?? live.distance ?? null,
+        duration: trainInfo.duration ?? live.duration ?? null,
+        source: { ...sourceInfo, name: sourceName, code: sourceCode },
+        destination: { ...destinationInfo, name: destinationName, code: destinationCode }
+      },
+      trainNumber: live.trainNo || live.trainNumber || number,
+      trainName,
+      status,
+      runningStatus: status,
+      currentLocation,
+      currentStation: currentLocation.stationName,
+      currentStationCode: currentLocation.stationCode,
+      nextHalt,
+      nextStation: nextHalt.stationName,
+      speed: live.averageSpeedKmph ?? live.speedKmph ?? live.speed ?? null,
+      delayMinutes: live.delayMinutes ?? live.progress?.delayMinutes ?? live.progress?.delay ?? null,
+      sourceStation: sourceName,
+      destinationStation: destinationName,
+      route,
+      startDate: live.startDate || live.journeyDate || requestedDate,
+      lastUpdatedAt: live.lastUpdate || live.lastUpdatedAt || null,
+      updatedAt: live.lastUpdate || live.lastUpdatedAt || null,
+      trackingMode: live.trackingMode || 'RailKit live tracking'
     };
 
     return res.json({ ...result, data: normalizedData });
@@ -245,31 +375,29 @@ app.get("/api/train/:number/live", async (req, res) => {
 
 
 /* Train number/name autocomplete search */
-app.get("/api/train/search", async (req, res) => {
-  const query = String(req.query.q || "").trim();
-
+app.get('/api/train/search', async (req, res) => {
+  const query = String(req.query.q || '').trim();
   if (!query || query.length > 100) {
-    return res.status(400).json({
-      success: false,
-      error: "Enter a train number or name (1-100 characters)."
-    });
+    return res.status(400).json({ success: false, error: 'Enter a train number or name (1-100 characters).' });
   }
-
   try {
     const limit = Math.min(50, Math.max(1, Number(req.query.limit) || 10));
-    let data;
-    if (/^\d+$/.test(query)) {
-      data = await railkitTrainByNumber(query);
-    } else {
-      data = await railkitTrainsByName(query);
+    const payload = /^\d+$/.test(query)
+      ? await railkitTrainByNumber(query)
+      : await railkitTrainsByName(query);
+    if (!payload || payload.success === false) {
+      return res.status(502).json(payload || { success: false, error: 'Train search unavailable.' });
     }
-    if (Array.isArray(data?.data)) {
-      data = { ...data, data: data.data.slice(0, limit) };
-    }
-    res.json(data);
-    res.json(data);
+    const rows = railKitRows(payload, ['trains', 'results', 'items', 'records', 'trainList', 'train_list']);
+    const trains = rows.map(normalizeRailKitTrain).filter(item => item.number).slice(0, limit);
+    return res.json({
+      success: true,
+      query: payload.data?.query || payload.query || query,
+      count: trains.length,
+      data: trains
+    });
   } catch (error) {
-    handleError(res, error);
+    return handleError(res, error);
   }
 });
 
@@ -288,23 +416,24 @@ app.get("/api/train/:number/schedule", async (req, res) => {
 });
 
 // Station search
-app.get("/api/stations/search", async (req, res) => {
-  const query = String(req.query.q || "").trim();
-
-  if (query.length < 2) {
-    return res.status(400).json({
-      error: "Enter at least 2 characters to search stations"
-    });
+app.get('/api/stations/search', async (req, res) => {
+  const query = String(req.query.q || '').trim();
+  if (query.length < 2 || query.length > 100) {
+    return res.status(400).json({ error: 'Enter a station name between 2 and 100 characters.' });
   }
-
   try {
-    const data = await railkitStationsByName(query);
-    res.json(data);
+    const payload = await railkitStationsByName(query);
+    if (!payload || payload.success === false) {
+      return res.status(502).json(payload || { success: false, error: 'Station search unavailable.' });
+    }
+    const stations = railKitRows(payload, ['stations', 'results', 'items', 'records', 'stationList', 'station_list'])
+      .map(normalizeRailKitStation)
+      .filter(item => item.code || item.name);
+    return res.json({ success: true, count: stations.length, data: stations });
   } catch (error) {
-    handleError(res, error);
+    return handleError(res, error);
   }
 });
-
 
 // Trains between two stations
 app.get("/api/trains/between", async (req, res) => {
@@ -342,7 +471,9 @@ app.get("/api/trains/between", async (req, res) => {
   }
 
   try {
-    const data = await railkitSearchTrainBetweenStations(from, to, date);
+    const parts = date.split('-');
+    const railkitDate = parts[2] + '-' + parts[1] + '-' + parts[0];
+    const data = await railkitSearchTrainBetweenStations(from, to, railkitDate);
     return res.json(data);
   } catch (error) {
     handleError(res, error);
