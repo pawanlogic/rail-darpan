@@ -1,4 +1,5 @@
 import rateLimit from "express-rate-limit";
+import nodemailer from "nodemailer";
 import express from "express";
 import cors from "cors";
 import path from "path";
@@ -67,6 +68,94 @@ app.get("/api/health", (req, res) => {
   });
 });
 
+
+
+// Contact feedback email endpoint
+const contactLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 5,
+  standardHeaders: "draft-8",
+  legacyHeaders: false,
+  message: { success: false, error: "Too many messages. Please try again later." }
+});
+
+app.post("/api/contact", contactLimiter, async (req, res) => {
+  const body = req.body || {};
+
+  if (String(body.website || "").trim()) {
+    return res.json({ success: true, message: "Message received." });
+  }
+
+  const name = String(body.name || "").trim();
+  const email = String(body.email || "").trim();
+  const subject = String(body.subject || "").trim();
+  const message = String(body.message || "").trim();
+
+  if (name.length < 2 || name.length > 80) {
+    return res.status(400).json({ success: false, error: "Enter a valid name (2–80 characters)." });
+  }
+  if (email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return res.status(400).json({ success: false, error: "Enter a valid email address." });
+  }
+  if (subject.length < 3 || subject.length > 120 || /[\r\n]/.test(subject)) {
+    return res.status(400).json({ success: false, error: "Enter a subject (3–120 characters)." });
+  }
+  if (message.length < 10 || message.length > 5000) {
+    return res.status(400).json({ success: false, error: "Message must be 10–5000 characters." });
+  }
+
+  const { SMTP_HOST, SMTP_USER, SMTP_PASS } = process.env;
+  const port = Number(process.env.SMTP_PORT || 587);
+  const recipient = process.env.CONTACT_TO || "info@raildarpan.in";
+  const sender = process.env.SMTP_FROM || SMTP_USER;
+
+  if (!SMTP_HOST || !SMTP_USER || !SMTP_PASS || !sender || !Number.isInteger(port)) {
+    console.error("Contact email is not configured: SMTP settings are missing.");
+    return res.status(503).json({
+      success: false,
+      error: "Feedback email is not configured yet. Please email info@raildarpan.in directly."
+    });
+  }
+
+  try {
+    const transporter = nodemailer.createTransport({
+      host: SMTP_HOST,
+      port,
+      secure: process.env.SMTP_SECURE
+        ? process.env.SMTP_SECURE.toLowerCase() === "true"
+        : port === 465,
+      auth: { user: SMTP_USER, pass: SMTP_PASS },
+      connectionTimeout: 10000,
+      greetingTimeout: 10000,
+      socketTimeout: 15000
+    });
+
+    await transporter.sendMail({
+      from: sender,
+      to: recipient,
+      replyTo: email,
+      subject: `Rail Darpan feedback: ${subject}`,
+      text: [
+        "New message from the Rail Darpan Contact Us form.",
+        "",
+        `Name: ${name}`,
+        `Email: ${email}`,
+        `Subject: ${subject}`,
+        "",
+        "Message:",
+        message
+      ].join("\n")
+    });
+
+    return res.json({ success: true, message: "Message sent." });
+  } catch (error) {
+    console.error("Contact email delivery failed:", error.message);
+    return res.status(502).json({
+      success: false,
+      error: "Message could not be sent. Please try again or email info@raildarpan.in."
+    });
+  }
+});
 
 // Public railway APIs; provider cache applies to API requests.
 app.use("/api", providerCache);
