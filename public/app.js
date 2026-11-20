@@ -4210,16 +4210,25 @@ function renderCompactScheduleV2(payload, panel) {
       runDays.forEach((v, i) => { if (v === true || v === 1) activeDays.add(i); });
     }
   } else if (typeof runDays === "string") {
-    runDays.toLowerCase().split(/[^a-z]+/).filter(Boolean).forEach(token => {
-      if (aliases[token] !== undefined) {
-        activeDays.add(aliases[token]);
-        dayDataAvailable = true;
-      }
-      if (token === "daily") {
-        dayDataAvailable = true;
-        dayNames.forEach((_, i) => activeDays.add(i));
-      }
-    });
+    const normalizedRunDays = runDays.trim();
+
+    if (/^[01]{7}$/.test(normalizedRunDays)) {
+      dayDataAvailable = true;
+      normalizedRunDays.split("").forEach((value, index) => {
+        if (value === "1") activeDays.add(index);
+      });
+    } else {
+      normalizedRunDays.toLowerCase().split(/[^a-z]+/).filter(Boolean).forEach(token => {
+        if (aliases[token] !== undefined) {
+          activeDays.add(aliases[token]);
+          dayDataAvailable = true;
+        }
+        if (token === "daily") {
+          dayDataAvailable = true;
+          dayNames.forEach((_, i) => activeDays.add(i));
+        }
+      });
+    }
   } else if (runDays && typeof runDays === "object") {
     Object.entries(runDays).forEach(([key, value]) => {
       const index = aliases[key.toLowerCase()];
@@ -5635,9 +5644,13 @@ form.addEventListener("submit", async event => {
 
     renderResult(data);
     if (currentMode !== "pnr") rdShowProviderCacheNotice(result, response);
+    result.style.scrollMarginTop = "90px";
+    result.scrollIntoView({ behavior: "smooth", block: "start" });
   } catch (error) {
     result.replaceChildren();
     addText(result, "p", error.message || "Unable to retrieve railway information.", "result-error");
+    result.style.scrollMarginTop = "90px";
+    result.scrollIntoView({ behavior: "smooth", block: "start" });
   } finally {
     button.disabled = false;
     button.textContent = modes[currentMode].button;
@@ -5911,6 +5924,28 @@ function rdStationSuggestions(payload) {
   return [];
 }
 
+/* Trains Between Stations: local station-code autocomplete */
+
+const rdBetweenFromInput = document.getElementById("rdBetweenFrom");
+const rdBetweenToInput = document.getElementById("rdBetweenTo");
+
+function rdAttachBetweenStationAutocomplete(inputEl) {
+  rdAttachAutocomplete(inputEl, {
+    minLength: 2,
+    endpoint: query =>
+      `/api/stations/code-search?q=${encodeURIComponent(query)}`,
+    items: rdStationSuggestions,
+    label: item =>
+      [item.code, item.name].filter(Boolean).join(" — ") || "Station",
+    description: item =>
+      [item.state, item.zone].filter(Boolean).join(" · "),
+    value: item => String(item.code || "").toUpperCase()
+  });
+}
+
+rdAttachBetweenStationAutocomplete(rdBetweenFromInput);
+rdAttachBetweenStationAutocomplete(rdBetweenToInput);
+
 /* Station name autocomplete */
 const rdStationNameInput = document.getElementById("stationQuery");
 
@@ -5958,7 +5993,7 @@ function rdTrainSuggestions(payload) {
 /* Main train autocomplete: Live and Schedule only, never PNR */
 rdAttachAutocomplete(input, {
   when: () => currentMode === "live" || currentMode === "schedule",
-  minLength: query => /^\d+$/.test(query) ? 5 : 2,
+  minLength: 2,
   endpoint: query => `/api/train/search?q=${encodeURIComponent(query)}&limit=8`,
   items: rdTrainSuggestions,
   label: item => [
@@ -6066,8 +6101,14 @@ rdBetweenStyle.textContent = `
   .rd-between-panel .search-form {
     align-items: end;
   }
-  .rd-between-train {
+  .rd-between-train-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
     margin-top: 12px;
+  }
+  .rd-between-train {
+    margin-top: 0;
     padding: 16px;
     border: 1px solid #e1e7f0;
     border-radius: 12px;
@@ -6079,6 +6120,28 @@ rdBetweenStyle.textContent = `
   }
   .rd-between-train p {
     margin: 5px 0;
+  }
+  .rd-between-train-days {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 10px;
+  }
+  .rd-between-train-day {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 38px;
+    padding: 5px 8px;
+    border-radius: 7px;
+    background: #e8edf3;
+    color: #687386;
+    font-size: 12px;
+    font-weight: 700;
+  }
+  .rd-between-train-day.active {
+    background: #dcfce7;
+    color: #166534;
   }
   .rd-between-train-actions {
     display: flex;
@@ -6092,6 +6155,9 @@ rdBetweenStyle.textContent = `
     cursor: pointer;
   }
   @media(max-width:600px) {
+    .rd-between-train-grid {
+      grid-template-columns: minmax(0, 1fr);
+    }
     .rd-between-panel {
       padding: 14px;
     }
@@ -6154,11 +6220,11 @@ function rdBetweenTrainInfo(row) {
     ? `${Math.floor(durationMinutes / 60)}h ${durationMinutes % 60}m`
     : durationRaw;
 
-  const daysRaw = nested.runDays || nested.run_days || nested.daysOfRun;
-  const days = Array.isArray(daysRaw)
-    ? daysRaw.map(day => String(day).slice(0, 1).toUpperCase() +
-        String(day).slice(1, 3)).join(", ")
-    : rdBetweenText(daysRaw);
+  const days = pick([
+    "runDays", "run_days", "daysOfRun", "days_of_run",
+    "running_days", "runningDays", "daysOfRunFromSource",
+    "days_of_run_from_source"
+  ]);
 
   return {
     number,
@@ -6182,6 +6248,39 @@ function rdBetweenTrainInfo(row) {
     days
   };
 }
+function rdBetweenDayFlags(value) {
+  const text = rdBetweenText(value).trim();
+  if (!text) return null;
+
+  if (/^[01]{7}$/.test(text)) {
+    return new Set(text.split("")
+      .map((flag, index) => flag === "1" ? index : -1)
+      .filter(index => index >= 0));
+  }
+
+  const aliases = {
+    mon: 0, monday: 0,
+    tue: 1, tues: 1, tuesday: 1,
+    wed: 2, wednesday: 2,
+    thu: 3, thur: 3, thurs: 3, thursday: 3,
+    fri: 4, friday: 4,
+    sat: 5, saturday: 5,
+    sun: 6, sunday: 6
+  };
+
+  const tokens = text.toLowerCase().match(/[a-z]+/g) || [];
+  if (tokens.includes("daily")) {
+    return new Set([0, 1, 2, 3, 4, 5, 6]);
+  }
+
+  const active = new Set();
+  tokens.forEach(token => {
+    if (aliases[token] !== undefined) active.add(aliases[token]);
+  });
+
+  return active.size ? active : null;
+}
+
 function rdBetweenFindTrainRows(value, depth = 0) {
   if (depth > 7 || value === null || value === undefined) return null;
 
@@ -6343,6 +6442,8 @@ if (rdBetweenForm) {
           "result-success"
         );
 
+        const trainGrid = document.createElement("div");
+        trainGrid.className = "rd-between-train-grid";
         rows.forEach(row => {
           const info = rdBetweenTrainInfo(row);
           if (!info) return;
@@ -6383,8 +6484,26 @@ if (rdBetweenForm) {
             addText(card, "p", details.join(" · "), "result-label");
           }
 
-          if (info.days) {
+          const activeDays = rdBetweenDayFlags(info.days);
+          if (activeDays) {
+            const daysWrap = document.createElement("div");
+            daysWrap.className = "rd-between-train-days";
+            daysWrap.setAttribute("aria-label", "Train running days");
+
+            ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].forEach((day, index) => {
+              const badge = document.createElement("span");
+              badge.className = activeDays.has(index)
+                ? "rd-between-train-day active"
+                : "rd-between-train-day";
+              badge.textContent = day;
+              daysWrap.appendChild(badge);
+            });
+
+            card.appendChild(daysWrap);
+          } else if (info.days) {
             addText(card, "p", `Runs: ${info.days}`, "result-label");
+          } else {
+            addText(card, "p", "Running days not provided by data source.", "result-label");
           }
 
           const actions = document.createElement("div");
@@ -6409,8 +6528,9 @@ if (rdBetweenForm) {
           actions.appendChild(liveButton);
           actions.appendChild(scheduleButton);
           card.appendChild(actions);
-          panel.appendChild(card);
+          trainGrid.appendChild(card);
         });
+              panel.appendChild(trainGrid);
       } else {
         addText(
           panel,
@@ -9059,7 +9179,7 @@ function rdNtesRender() {
   feed.appendChild(form);
 
   rdAttachAutocomplete(searchInput, {
-    minLength: query => /^\d+$/.test(query) ? 5 : 2,
+    minLength: 2,
     endpoint: query => `/api/train/search?q=${encodeURIComponent(query)}&limit=8`,
     items: rdTrainSuggestions,
     label: item => [
@@ -9343,3 +9463,120 @@ if (!window.__railDarpanNewsVisibilityBound) {
     }
   });
 }
+
+
+
+/* RD_NAV_DROPDOWN_BEHAVIOUR */
+(() => {
+  const nav = document.querySelector(".rd-main-nav");
+  if (!nav) return;
+
+  const items = [...nav.querySelectorAll(".rd-nav-item")];
+
+  function closeAll(except = null) {
+    items.forEach(item => {
+      if (item === except) return;
+      const button = item.querySelector(".rd-nav-trigger");
+      const menu = item.querySelector(".rd-nav-menu");
+      if (button && menu) {
+        button.setAttribute("aria-expanded", "false");
+        menu.hidden = true;
+      }
+    });
+  }
+
+  items.forEach(item => {
+    const button = item.querySelector(".rd-nav-trigger");
+    const menu = item.querySelector(".rd-nav-menu");
+    if (!button || !menu) return;
+
+    button.addEventListener("click", event => {
+      event.preventDefault();
+      event.stopPropagation();
+
+      const willOpen = menu.hidden;
+      closeAll(item);
+
+      menu.hidden = !willOpen;
+      button.setAttribute("aria-expanded", String(willOpen));
+    });
+
+    menu.addEventListener("click", event => {
+      if (event.target.closest("a")) {
+        closeAll();
+      }
+    });
+  });
+
+  document.addEventListener("click", event => {
+    if (!nav.contains(event.target)) closeAll();
+  });
+
+  document.addEventListener("keydown", event => {
+    if (event.key === "Escape") {
+      closeAll();
+    }
+  });
+})();
+
+
+/* RD_NAV_HOVER_BEHAVIOUR */
+(() => {
+  const nav = document.querySelector(".rd-main-nav");
+  if (!nav) return;
+
+  const items = [...nav.querySelectorAll(".rd-nav-item")];
+  const desktopHover = window.matchMedia(
+    "(hover: hover) and (pointer: fine) and (min-width: 761px)"
+  );
+
+  function closeMenus(except = null) {
+    items.forEach(item => {
+      if (item === except) return;
+      const button = item.querySelector(".rd-nav-trigger");
+      const menu = item.querySelector(".rd-nav-menu");
+      if (button && menu) {
+        menu.hidden = true;
+        button.setAttribute("aria-expanded", "false");
+      }
+    });
+  }
+
+  items.forEach(item => {
+    const button = item.querySelector(".rd-nav-trigger");
+    const menu = item.querySelector(".rd-nav-menu");
+    if (!button || !menu) return;
+
+    item.addEventListener("mouseenter", () => {
+      if (!desktopHover.matches) return;
+      closeMenus(item);
+      menu.hidden = false;
+      button.setAttribute("aria-expanded", "true");
+    });
+
+    item.addEventListener("mouseleave", () => {
+      if (!desktopHover.matches) return;
+      menu.hidden = true;
+      button.setAttribute("aria-expanded", "false");
+    });
+
+    item.addEventListener("focusin", () => {
+      if (!desktopHover.matches) return;
+      closeMenus(item);
+      menu.hidden = false;
+      button.setAttribute("aria-expanded", "true");
+    });
+
+    item.addEventListener("focusout", event => {
+      if (!desktopHover.matches || item.contains(event.relatedTarget)) return;
+      menu.hidden = true;
+      button.setAttribute("aria-expanded", "false");
+    });
+  });
+
+  desktopHover.addEventListener?.("change", () => closeMenus());
+
+  document.addEventListener("keydown", event => {
+    if (event.key === "Escape") closeMenus();
+  });
+})();

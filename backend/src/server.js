@@ -2,6 +2,7 @@ import rateLimit from "express-rate-limit";
 import express from "express";
 import cors from "cors";
 import path from "path";
+import fs from "fs";
 import { fileURLToPath } from "url";
 import dotenv from "dotenv";
 import {
@@ -20,6 +21,17 @@ import {
 import { providerCache, getProviderCacheStats } from "./provider-cache.js";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+const stationDirectory = JSON.parse(
+  fs.readFileSync(
+    path.resolve(__dirname, "../data/stations.json"),
+    "utf8"
+  )
+);
+
+if (!Array.isArray(stationDirectory)) {
+  throw new Error("Invalid local station directory.");
+}
 
 dotenv.config({ path: path.resolve(__dirname, "../.env") });
 
@@ -384,8 +396,8 @@ app.get('/api/train/search', async (req, res) => {
     const limit = Math.min(50, Math.max(1, Number(req.query.limit) || 10));
     const isNumericQuery = /^\d+$/.test(query);
 
-    // RailKit trainByNumber requires an exact 5-digit number.
-    if (isNumericQuery && query.length !== 5) {
+    // RailKit trainByNumber supports 2-5 digit numeric prefixes.
+    if (isNumericQuery && (query.length < 2 || query.length > 5)) {
       return res.json({ success: true, query, count: 0, data: [] });
     }
 
@@ -420,6 +432,53 @@ app.get("/api/train/:number/schedule", async (req, res) => {
   } catch (error) {
     handleError(res, error);
   }
+});
+
+// Local station-code prefix autocomplete
+app.get("/api/stations/code-search", (req, res) => {
+  const query = String(req.query.q || "").trim().toUpperCase();
+
+  if (!/^[A-Z0-9]{2,10}$/.test(query)) {
+    return res.status(400).json({
+      success: false,
+      error: "Enter at least 2 valid station-code characters."
+    });
+  }
+
+  const results = stationDirectory
+    .map(station => {
+      const code = station.code.toUpperCase();
+      const name = station.name.toUpperCase();
+
+      let rank = 99;
+
+      if (query.length >= 4 && code === query) rank = 0;
+      else if (code.startsWith(query)) rank = 1;
+      else if (name.startsWith(query)) rank = 2;
+      else if (name.includes(query)) rank = 3;
+
+      return { ...station, rank };
+    })
+    .filter(station => station.rank < 99)
+    .sort((a, b) =>
+      a.rank - b.rank ||
+      a.poolRank - b.poolRank ||
+      b.priority - a.priority ||
+      a.code.localeCompare(b.code)
+    )
+    .slice(0, 8)
+    .map(({ code, name, state, zone }) => ({
+      code,
+      name,
+      state,
+      zone
+    }));
+
+  return res.json({
+    success: true,
+    count: results.length,
+    data: results
+  });
 });
 
 // Station search

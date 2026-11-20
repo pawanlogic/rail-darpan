@@ -1946,6 +1946,37 @@ footer a,
   background: #ffffff !important;
 }
 
+
+/* RD_NAV_HOVER_BEHAVIOUR */
+@media (hover: hover) and (pointer: fine) and (min-width: 761px) {
+  .rd-nav-item:hover > .rd-nav-menu,
+  .rd-nav-item:focus-within > .rd-nav-menu {
+    display: block !important;
+  }
+
+  .rd-nav-item:hover > .rd-nav-trigger,
+  .rd-nav-item:focus-within > .rd-nav-trigger {
+    background: rgba(103,232,249,.15);
+    border-color: rgba(103,232,249,.55);
+    color: #67e8f9;
+  }
+
+  .rd-nav-item:hover > .rd-nav-trigger .rd-nav-arrow,
+  .rd-nav-item:focus-within > .rd-nav-trigger .rd-nav-arrow {
+    transform: rotate(180deg);
+  }
+
+  .rd-nav-menu {
+    top: 100%;
+    margin-top: 0;
+  }
+
+  .rd-nav-item:hover > .rd-nav-menu[hidden],
+  .rd-nav-item:focus-within > .rd-nav-menu[hidden] {
+    display: block !important;
+  }
+}
+
 </style>
 
 <style id="rail-darpan-live-premium-ui">
@@ -2550,6 +2581,126 @@ footer a,
 </style>
 
   <meta name="google-adsense-account" content="ca-pub-5865863926021628">
+
+<style id="rd-nav-dropdown-style">
+.rd-main-nav {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 8px;
+  position: relative;
+  z-index: 1000;
+}
+
+.rd-nav-item {
+  position: relative;
+}
+
+.rd-main-nav .rd-nav-trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 11px 13px;
+  border: 1px solid rgba(255,255,255,.18);
+  border-radius: 10px;
+  background: rgba(255,255,255,.07);
+  color: #eef2ff;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background .2s ease, border-color .2s ease;
+}
+
+.rd-main-nav .rd-nav-trigger:hover,
+.rd-main-nav .rd-nav-trigger[aria-expanded="true"] {
+  background: rgba(103,232,249,.15);
+  border-color: rgba(103,232,249,.55);
+  color: #67e8f9;
+}
+
+.rd-nav-arrow {
+  display: inline-block;
+  transition: transform .2s ease;
+}
+
+.rd-nav-trigger[aria-expanded="true"] .rd-nav-arrow {
+  transform: rotate(180deg);
+}
+
+.rd-nav-menu {
+  position: absolute;
+  top: calc(100% + 10px);
+  left: 0;
+  min-width: 245px;
+  max-width: min(290px, calc(100vw - 24px));
+  padding: 8px;
+  border: 1px solid #dbe4f0;
+  border-radius: 13px;
+  background: #ffffff;
+  box-shadow: 0 16px 40px rgba(15,23,42,.22);
+  z-index: 10000;
+}
+
+.rd-nav-menu[hidden] {
+  display: none !important;
+}
+
+.rd-main-nav .rd-nav-menu a {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 11px 12px;
+  border-radius: 8px;
+  color: #1e293b !important;
+  font-size: 13px;
+  font-weight: 650;
+  line-height: 1.4;
+  text-decoration: none;
+  white-space: normal;
+}
+
+.rd-main-nav .rd-nav-menu a:hover {
+  color: #1d4ed8 !important;
+  background: #eff6ff;
+}
+
+@media (max-width: 760px) {
+  .rd-main-nav {
+    width: 100%;
+    justify-content: flex-start;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    margin-top: 12px;
+  }
+
+  .rd-nav-item {
+    min-width: 0;
+  }
+
+  .rd-main-nav .rd-nav-trigger {
+    width: 100%;
+    min-height: 44px;
+    padding: 10px 8px;
+    font-size: 13px;
+  }
+
+  .rd-nav-menu {
+    left: 0;
+    min-width: 0;
+    width: min(270px, calc(100vw - 32px));
+  }
+
+  .rd-nav-item:nth-child(even) .rd-nav-menu {
+    left: auto;
+    right: 0;
+  }
+}
+</style>
+
 </head>
 <body>
   <div class="topbar">
@@ -2568,12 +2719,63 @@ footer a,
         <p>Your Ultimate Indian Railways Companion</p>
       </div>
     </a>
-    <nav>
-      <a href="#services">Services</a>
-      <a href="#dashboard">My Dashboard</a>
-      <a href="#updates">Railway Updates</a>
-      <a href="#about">About</a>
-    </nav>
+    <nav class="rd-main-nav" aria-label="Main navigation">
+
+  <div class="rd-nav-item">
+    <button class="rd-nav-trigger" type="button" aria-expanded="false" aria-controls="rdNavServices">
+      Services <span class="rd-nav-arrow">⌄</span>
+    </button>
+    <div class="rd-nav-menu" id="rdNavServices" hidden>
+      <a href="#search" data-select="pnr">🎫 PNR Status</a>
+      <a href="#search" data-select="live">📍 Live Train Status</a>
+      <a href="#search" data-select="schedule">🗓️ Train Schedule</a>
+      <a href="#station-tools">🚉 Station Information</a>
+      <a href="#rdBetweenForm">🚆 Trains Between Stations</a>
+      <a href="#rdAlertsCentre">⚠️ Disruptions &amp; Alerts</a>
+      <a href="#railway-news">📰 Railway News</a>
+    </div>
+  </div>
+
+  <div class="rd-nav-item">
+    <button class="rd-nav-trigger" type="button" aria-expanded="false" aria-controls="rdNavDashboard">
+      My Dashboard <span class="rd-nav-arrow">⌄</span>
+    </button>
+    <div class="rd-nav-menu" id="rdNavDashboard" hidden>
+      <a href="#dashboard">📊 Dashboard Overview</a>
+      <a href="#rdFavouriteTrains">⭐ Favourite Trains</a>
+      <a href="#rdSavedStations">🚉 Saved Stations</a>
+      <a href="#rdRecentTrains">🕘 Recent Train Searches</a>
+    </div>
+  </div>
+
+  <div class="rd-nav-item">
+    <button class="rd-nav-trigger" type="button" aria-expanded="false" aria-controls="rdNavUpdates">
+      Railway Updates <span class="rd-nav-arrow">⌄</span>
+    </button>
+    <div class="rd-nav-menu" id="rdNavUpdates" hidden>
+      <a href="#rdAlertsCentre">⚠️ Train Running Alerts</a>
+      <a href="#railway-news">📰 Railway News</a>
+      <a href="https://www.pib.gov.in/allrelease.aspx?lang=1&amp;reg=3" target="_blank" rel="noopener noreferrer">🏛️ Ministry of Railways News</a>
+      <a href="https://indianrailways.gov.in/railwayboard/" target="_blank" rel="noopener noreferrer">🚆 Railway Board</a>
+      <a href="https://rrb.indianrailways.gov.in/" target="_blank" rel="noopener noreferrer">📋 Railway Recruitment</a>
+    </div>
+  </div>
+
+  <div class="rd-nav-item">
+    <button class="rd-nav-trigger" type="button" aria-expanded="false" aria-controls="rdNavAbout">
+      About <span class="rd-nav-arrow">⌄</span>
+    </button>
+    <div class="rd-nav-menu" id="rdNavAbout" hidden>
+      <a href="/about.html">ℹ️ About Rail Darpan</a>
+      <a href="/guides/">📚 Railway Guides</a>
+      <a href="/about.html">📖 About Us</a>
+      <a href="/privacy.html">🔒 Privacy Policy</a>
+      <a href="/terms.html">📜 Terms &amp; Conditions</a>
+      <a href="/contact.html">✉️ Contact Us</a>
+    </div>
+  </div>
+
+</nav>
   </header>
 
   <section class="hero">
@@ -2879,18 +3081,7 @@ footer a,
         </div>
       </div>
     </section>
-
-    <section id="about">
-      <div class="section-heading">
-        <h3>About Rail Darpan</h3>
-      </div>
-      <div class="news">
-        <p style="color:var(--muted);line-height:1.8;margin:0">
-          Rail Darpan is an independent railway information portal concept. It is not an official Indian Railways or IRCTC website. Information availability and accuracy depend on connected data providers.
-        </p>
-      </div>
-    </section>
-  </main>
+</main>
 
   <footer>
     <strong>Rail Darpan</strong><br>
