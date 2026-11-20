@@ -1,5 +1,4 @@
 import rateLimit from "express-rate-limit";
-import nodemailer from "nodemailer";
 import express from "express";
 import cors from "cors";
 import path from "path";
@@ -37,6 +36,7 @@ if (!Array.isArray(stationDirectory)) {
 dotenv.config({ path: path.resolve(__dirname, "../.env") });
 
 const app = express();
+app.set("trust proxy", 1);
 const PORT = process.env.PORT || 5000;
 app.use(express.json());
 app.use(cors());
@@ -70,7 +70,7 @@ app.get("/api/health", (req, res) => {
 
 
 
-// Contact feedback email endpoint
+// Contact feedback email endpoint using Resend HTTPS API
 const contactLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   limit: 5,
@@ -104,13 +104,12 @@ app.post("/api/contact", contactLimiter, async (req, res) => {
     return res.status(400).json({ success: false, error: "Message must be 10–5000 characters." });
   }
 
-  const { SMTP_HOST, SMTP_USER, SMTP_PASS } = process.env;
-  const port = Number(process.env.SMTP_PORT || 587);
+  const apiKey = process.env.RESEND_API_KEY;
   const recipient = process.env.CONTACT_TO || "info@raildarpan.in";
-  const sender = process.env.SMTP_FROM || SMTP_USER;
+  const sender = process.env.RESEND_FROM || "Rail Darpan <info@raildarpan.in>";
 
-  if (!SMTP_HOST || !SMTP_USER || !SMTP_PASS || !sender || !Number.isInteger(port)) {
-    console.error("Contact email is not configured: SMTP settings are missing.");
+  if (!apiKey) {
+    console.error("Contact email is not configured: RESEND_API_KEY is missing.");
     return res.status(503).json({
       success: false,
       error: "Feedback email is not configured yet. Please email info@raildarpan.in directly."
@@ -118,34 +117,44 @@ app.post("/api/contact", contactLimiter, async (req, res) => {
   }
 
   try {
-    const transporter = nodemailer.createTransport({
-      host: SMTP_HOST,
-      port,
-      secure: process.env.SMTP_SECURE
-        ? process.env.SMTP_SECURE.toLowerCase() === "true"
-        : port === 465,
-      auth: { user: SMTP_USER, pass: SMTP_PASS },
-      connectionTimeout: 10000,
-      greetingTimeout: 10000,
-      socketTimeout: 15000
+    const response = await fetch(String.fromCharCode(104,116,116,112,115,58,47,47)+'api.resend.com/emails', {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${apiKey}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        from: sender,
+        to: [recipient],
+        reply_to: email,
+        subject: `Rail Darpan feedback: ${subject}`,
+        text: [
+          "New message from the Rail Darpan Contact Us form.",
+          "",
+          `Name: ${name}`,
+          `Email: ${email}`,
+          `Subject: ${subject}`,
+          "",
+          "Message:",
+          message
+        ].join("\n")
+      }),
+      signal: AbortSignal.timeout(15000)
     });
 
-    await transporter.sendMail({
-      from: sender,
-      to: recipient,
-      replyTo: email,
-      subject: `Rail Darpan feedback: ${subject}`,
-      text: [
-        "New message from the Rail Darpan Contact Us form.",
-        "",
-        `Name: ${name}`,
-        `Email: ${email}`,
-        `Subject: ${subject}`,
-        "",
-        "Message:",
-        message
-      ].join("\n")
-    });
+    const result = await response.json().catch(() => ({}));
+
+    if (!response.ok) {
+      console.error(
+        "Contact email delivery failed:",
+        response.status,
+        result.message || result.name || "Resend API error"
+      );
+      return res.status(502).json({
+        success: false,
+        error: "Message could not be sent. Please try again or email info@raildarpan.in."
+      });
+    }
 
     return res.json({ success: true, message: "Message sent." });
   } catch (error) {
