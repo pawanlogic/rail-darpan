@@ -15,6 +15,7 @@ import {
   railkitTrainsByName,
   railkitGetTrainInfo,
   railkitSearchTrainBetweenStations,
+  railkitGetAvailability,
   railkitLiveAtStation,
   railkitCancelList
 } from "./providers/railkit.js";
@@ -641,6 +642,125 @@ app.get("/api/trains/between", async (req, res) => {
     return res.json(data);
   } catch (error) {
     handleError(res, error);
+  }
+});
+
+
+// Seat availability — RailKit only.
+app.get("/api/trains/:number/availability", async (req, res) => {
+  const trainNo = String(req.params.number || "").trim();
+  const from = String(req.query.from || "").trim().toUpperCase();
+  const to = String(req.query.to || "").trim().toUpperCase();
+  const date = String(req.query.date || "").trim();
+  const coach = String(req.query.class || "").trim().toUpperCase();
+  const quota = String(req.query.quota || "").trim().toUpperCase();
+
+  const allowedClasses = new Set([
+    "2S", "SL", "3A", "3E", "2A", "1A", "CC", "EC"
+  ]);
+  const allowedQuotas = new Set(["GN", "TQ", "LD", "SS"]);
+
+  if (!/^\d{5}$/.test(trainNo)) {
+    return res.status(400).json({
+      success: false,
+      error: "Invalid train number."
+    });
+  }
+
+  if (!/^[A-Z]{1,5}$/.test(from) ||
+      !/^[A-Z]{1,5}$/.test(to)) {
+    return res.status(400).json({
+      success: false,
+      error: "Enter valid source and destination station codes."
+    });
+  }
+
+  if (from === to) {
+    return res.status(400).json({
+      success: false,
+      error: "Source and destination stations must be different."
+    });
+  }
+
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+    return res.status(400).json({
+      success: false,
+      error: "Enter journey date in YYYY-MM-DD format."
+    });
+  }
+
+  const parsedDate = new Date(`${date}T00:00:00.000Z`);
+  if (
+    Number.isNaN(parsedDate.getTime()) ||
+    parsedDate.toISOString().slice(0, 10) !== date
+  ) {
+    return res.status(400).json({
+      success: false,
+      error: "Invalid journey date."
+    });
+  }
+
+  if (!allowedClasses.has(coach)) {
+    return res.status(400).json({
+      success: false,
+      error: "Select a supported travel class."
+    });
+  }
+
+  if (!allowedQuotas.has(quota)) {
+    return res.status(400).json({
+      success: false,
+      error: "Select a supported quota."
+    });
+  }
+
+  try {
+    const trainInfo = await railkitGetTrainInfo(trainNo);
+    const route = trainInfo?.data?.route;
+
+    if (!trainInfo?.success || !Array.isArray(route)) {
+      return res.status(502).json({
+        success: false,
+        error: "Unable to verify this train's route. Please try again later."
+      });
+    }
+
+    const fromIndex = route.findIndex(
+      station => String(station?.stnCode || "").toUpperCase() === from
+    );
+    const toIndex = route.findIndex(
+      station => String(station?.stnCode || "").toUpperCase() === to
+    );
+
+    if (fromIndex < 0 || toIndex < 0) {
+      return res.status(400).json({
+        success: false,
+        error: "Selected stations are not both on this train's route."
+      });
+    }
+
+    if (fromIndex >= toIndex) {
+      return res.status(400).json({
+        success: false,
+        error: "Destination station must come after the boarding station on this train's route."
+      });
+    }
+
+    const parts = date.split("-");
+    const railkitDate = `${parts[2]}-${parts[1]}-${parts[0]}`;
+
+    const data = await railkitGetAvailability(
+      trainNo,
+      from,
+      to,
+      railkitDate,
+      coach,
+      quota
+    );
+
+    return res.json(data);
+  } catch (error) {
+    return handleError(res, error);
   }
 });
 

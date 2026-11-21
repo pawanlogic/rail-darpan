@@ -6154,12 +6154,80 @@ rdBetweenStyle.textContent = `
     padding: 9px 12px;
     cursor: pointer;
   }
+
+  .rd-seat-availability {
+    display: grid;
+    gap: 10px;
+    margin-top: 14px;
+    padding: 14px;
+    border: 1px solid #d6e2f1;
+    border-radius: 10px;
+    background: #f7faff;
+  }
+
+  .rd-seat-availability[hidden] {
+    display: none !important;
+  }
+
+  .rd-seat-availability strong {
+    color: #183b69;
+  }
+
+  .rd-seat-selection {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 9px;
+  }
+
+  .rd-seat-selection select,
+  .rd-seat-selection input {
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+    padding: 10px;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    background: #fff;
+  }
+
+  .rd-seat-availability button {
+    width: 100%;
+  }
+
+  .rd-seat-entry {
+    margin-top: 8px;
+    padding: 10px;
+    border: 1px solid #d6e2f1;
+    border-radius: 8px;
+    background: #fff;
+  }
+
+  .rd-seat-status-available {
+    color: #166534;
+    background: #dcfce7;
+    border: 1px solid #86efac;
+    padding: 9px 12px;
+    border-radius: 7px;
+    font-weight: 700;
+  }
+
+  .rd-seat-status-unavailable {
+    color: #b91c1c;
+    background: #fee2e2;
+    border: 1px solid #fecaca;
+    padding: 9px 12px;
+    border-radius: 7px;
+    font-weight: 700;
+  }
   @media(max-width:600px) {
     .rd-between-train-grid {
       grid-template-columns: minmax(0, 1fr);
     }
     .rd-between-panel {
       padding: 14px;
+    }
+    .rd-seat-selection {
+      grid-template-columns: minmax(0, 1fr);
     }
   }
 `;
@@ -6229,10 +6297,18 @@ function rdBetweenTrainInfo(row) {
   return {
     number,
     name: pick(["name", "trainName", "train_name"]) || `Train ${number}`,
-    fromName: rdBetweenText(from.name),
-    fromCode: rdBetweenText(from.code),
-    toName: rdBetweenText(to.name),
-    toCode: rdBetweenText(to.code),
+    fromName: rdBetweenText(from.name) || pick([
+      "from_stn_name", "source_stn_name", "fromStationName"
+    ]),
+    fromCode: rdBetweenText(from.code) || pick([
+      "from_stn_code", "source_stn_code", "fromStationCode"
+    ]),
+    toName: rdBetweenText(to.name) || pick([
+      "to_stn_name", "dstn_stn_name", "toStationName"
+    ]),
+    toCode: rdBetweenText(to.code) || pick([
+      "to_stn_code", "dstn_stn_code", "toStationCode"
+    ]),
     departure: rdBetweenText(from.departure) || pick([
       "departure", "departureTime", "departure_time",
       "fromTime", "from_time", "sourceDeparture", "source_departure"
@@ -6528,6 +6604,8 @@ if (rdBetweenForm) {
           actions.appendChild(liveButton);
           actions.appendChild(scheduleButton);
           card.appendChild(actions);
+
+
           trainGrid.appendChild(card);
         });
               panel.appendChild(trainGrid);

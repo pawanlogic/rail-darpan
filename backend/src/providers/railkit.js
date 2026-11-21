@@ -9,6 +9,7 @@ import {
   trainsByName,
   getTrainInfo,
   searchTrainBetweenStations,
+  getAvailability,
   liveAtStation,
   cancelList
 } from "railkit";
@@ -84,4 +85,25 @@ export async function railkitLiveAtStation(code, hours) {
 export async function railkitCancelList() {
   ensureRailKitConfigured();
   return await cancelList();
+}
+
+
+// RailKit Seat Availability API
+export async function railkitGetAvailability(
+  trainNo,
+  fromStnCode,
+  toStnCode,
+  date,
+  coach,
+  quota
+) {
+  ensureRailKitConfigured();
+  return await getAvailability(
+    trainNo,
+    fromStnCode,
+    toStnCode,
+    date,
+    coach,
+    quota
+  );
 }

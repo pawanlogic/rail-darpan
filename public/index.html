@@ -2701,6 +2701,245 @@ footer a,
 }
 </style>
 
+
+<style id="rd-seat-availability-style">
+.rd-seat-availability {
+  margin-top: 12px;
+  padding: 12px;
+  border: 1px solid rgba(59,130,246,.28);
+  border-radius: 12px;
+  background: rgba(59,130,246,.055);
+}
+.rd-seat-availability[hidden] {
+  display: none !important;
+}
+.rd-seat-selection {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 10px 0;
+}
+.rd-seat-selection select {
+  min-width: 135px;
+  max-width: 100%;
+  padding: 9px 10px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: #fff;
+  color: #172033;
+  font: inherit;
+}
+.rd-seat-availability > button {
+  margin-top: 2px;
+}
+.rd-seat-result {
+  margin-top: 10px;
+}
+.rd-seat-entry {
+  margin-top: 8px;
+  padding: 10px;
+  border: 1px solid #dbe4f0;
+  border-radius: 9px;
+  background: #fff;
+}
+.rd-seat-status {
+  margin: 5px 0;
+  font-size: 15px;
+  font-weight: 750;
+  overflow-wrap: anywhere;
+}
+@media (max-width: 600px) {
+  .rd-seat-selection {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+  .rd-seat-selection select {
+    width: 100%;
+  }
+}
+</style>
+
+
+<style id="rdStandaloneSeatStyles">
+.rd-live-tools-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start;
+  gap: 16px;
+  margin-top: 18px;
+}
+.rd-live-tool-card {
+  min-width: 0;
+  align-self: start;
+  padding: 18px;
+  border: 1px solid #dce5f1;
+  border-radius: 13px;
+  background: #fff;
+}
+.rd-live-tool-card h4 {
+  margin: 0 0 12px;
+  color: #183b69;
+}
+.rd-seat-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin: 12px 0;
+}
+.rd-seat-form-grid select,
+.rd-seat-form-grid input {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  padding: 11px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: #fff;
+}
+#rdSeatRouteFields[hidden] {
+  display: none !important;
+}
+#rdSeatRouteFields {
+  display: grid;
+  gap: 10px;
+}
+#rdSeatAvailabilityResults {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+#rdSeatAvailabilityResults .rd-seat-entry {
+  margin-top: 9px;
+  padding: 10px;
+  border: 1px solid #d6e2f1;
+  border-radius: 8px;
+  background: #fff;
+}
+#rdSeatAvailabilityResults .rd-seat-status-available {
+  padding: 9px;
+  border-radius: 7px;
+  color: #166534;
+  background: #dcfce7;
+  border: 1px solid #86efac;
+  font-weight: 700;
+}
+#rdSeatAvailabilityResults .rd-seat-status-unavailable {
+  padding: 9px;
+  border-radius: 7px;
+  color: #b91c1c;
+  background: #fee2e2;
+  border: 1px solid #fecaca;
+  font-weight: 700;
+}
+@media(max-width:700px) {
+  .rd-live-tools-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media(max-width:480px) {
+  .rd-seat-form-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+</style>
+
+
+<style id="rd-seat-search-ui-styles">
+.rd-seat-toggle {
+  border: 1px solid var(--border);
+  background: white;
+  color: var(--text);
+  padding: 11px 16px;
+  border-radius: 9px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.rd-seat-toggle.active {
+  background: var(--blue);
+  color: white;
+  border-color: var(--blue);
+}
+.rd-seat-search-panel {
+  margin: 4px 0 24px;
+  padding: 20px;
+  border: 1px solid #dce5f1;
+  border-radius: 13px;
+  background: #f8faff;
+}
+.rd-seat-search-panel[hidden] {
+  display: none !important;
+}
+.rd-seat-search-form {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+  align-items: end;
+}
+.rd-seat-search-form input,
+.rd-seat-search-form select {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  padding: 12px;
+  border: 1px solid #d7dfeb;
+  border-radius: 9px;
+  background: white;
+}
+#rdSeatTrainResults {
+  margin-top: 18px;
+  min-width: 0;
+}
+#rdSeatTrainResults .rd-between-train-grid {
+  align-items: start;
+}
+#rdSeatTrainResults .rd-between-train {
+  align-self: start;
+  min-width: 0;
+}
+.rd-seat-per-train-result[hidden] {
+  display: none !important;
+}
+.rd-seat-per-train-result {
+  margin-top: 12px;
+  min-width: 0;
+}
+.rd-seat-status-available {
+  padding: 9px 12px;
+  border-radius: 7px;
+  color: #166534;
+  background: #dcfce7;
+  border: 1px solid #86efac;
+  font-weight: 700;
+}
+.rd-seat-status-unavailable {
+  padding: 9px 12px;
+  border-radius: 7px;
+  color: #b91c1c;
+  background: #fee2e2;
+  border: 1px solid #fecaca;
+  font-weight: 700;
+}
+.rd-seat-entry {
+  margin-top: 8px;
+  padding: 10px;
+  border: 1px solid #d6e2f1;
+  border-radius: 8px;
+  background: white;
+}
+.rd-live-tools-grid {
+  grid-template-columns: minmax(0, 1fr);
+}
+@media(max-width:760px) {
+  .rd-seat-search-form {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media(max-width:520px) {
+  .rd-seat-search-form {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+</style>
+
 </head>
 <body>
   <div class="topbar">
@@ -2797,7 +3036,63 @@ footer a,
         <button class="tab active" data-mode="pnr">PNR Status</button>
         <button class="tab" data-mode="live">Live Train Status</button>
         <button class="tab" data-mode="schedule">Train Schedule</button>
+        <button type="button" id="rdSeatToggle" class="rd-seat-toggle" aria-expanded="false" aria-controls="rdSeatSearchPanel">Seat Availability</button>
       </div>
+
+
+      <section id="rdSeatSearchPanel" class="rd-seat-search-panel" hidden>
+        <h3>Seat Availability</h3>
+        <p class="sub">Enter your journey details to find matching trains and check live seat availability.</p>
+
+        <form id="rdSeatSearchForm" class="rd-seat-search-form">
+          <div class="field">
+            <label for="rdSeatSearchFrom">From Station Code</label>
+            <input id="rdSeatSearchFrom" type="text" maxlength="10"
+              placeholder="Example: NDLS" autocomplete="off" required>
+          </div>
+
+          <div class="field">
+            <label for="rdSeatSearchTo">To Station Code</label>
+            <input id="rdSeatSearchTo" type="text" maxlength="10"
+              placeholder="Example: BSB" autocomplete="off" required>
+          </div>
+
+          <div class="field">
+            <label for="rdSeatSearchDate">Journey Date</label>
+            <input id="rdSeatSearchDate" type="date" required>
+          </div>
+
+          <div class="field">
+            <label for="rdSeatSearchClass">Travel Class</label>
+            <select id="rdSeatSearchClass">
+              <option value="SL">Sleeper (SL)</option>
+              <option value="2S">Second Sitting (2S)</option>
+              <option value="3A">AC 3 Tier (3A)</option>
+              <option value="3E">AC 3 Economy (3E)</option>
+              <option value="2A">AC 2 Tier (2A)</option>
+              <option value="1A">First AC (1A)</option>
+              <option value="CC">AC Chair Car (CC)</option>
+              <option value="EC">Executive Chair Car (EC)</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label for="rdSeatSearchQuota">Booking Quota</label>
+            <select id="rdSeatSearchQuota">
+              <option value="GN">General</option>
+              <option value="TQ">Tatkal</option>
+              <option value="LD">Ladies</option>
+              <option value="SS">Senior Citizen</option>
+            </select>
+          </div>
+
+          <button class="primary" id="rdSeatSearchButton" type="submit">
+            Search Trains
+          </button>
+        </form>
+
+        <div id="rdSeatTrainResults" aria-live="polite"></div>
+      </section>
 
       <h3 id="formTitle">Check your PNR status</h3>
       <p class="sub" id="formSub">Enter your 10-digit PNR number to check your booking details.</p>
@@ -2974,7 +3269,10 @@ footer a,
 
     <hr style="border:0;border-top:1px solid #e1e7f0;margin:24px 0">
 
-    <form id="stationLiveForm" class="search-form">
+    <div class="rd-live-tools-grid">
+      <article class="rd-live-tool-card">
+        <h4>Live Station Board</h4>
+        <form id="stationLiveForm" class="search-form">
       <div class="field">
         <label for="stationCode">Station code</label>
         <input id="stationCode" type="text" maxlength="10"
@@ -2992,6 +3290,10 @@ footer a,
     </form>
 
     <div id="stationLiveResults" aria-live="polite"></div>
+      </article>
+
+
+    </div>
 
 
 
@@ -3154,5 +3456,6 @@ footer a,
 </script>
 
   <script src="/festival-theme.js?v=20261109"></script>
+<script src="/seat-availability.js" defer></script>
 </body>
 </html>
